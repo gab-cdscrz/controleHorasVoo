@@ -362,9 +362,10 @@ public without sharing class PlaneitAPIService {
             voosPorAeronave.put(idAeronave, voos);
         }
         
-        // FASE 3: COLETAR TODOS OS NOMES DE PILOTOS E OPERADORES (BULKIFICATION)
+        // FASE 3: COLETAR TODOS OS NOMES DE PILOTOS, OPERADORES E IDS DE ABASTECIMENTOS
         Set<String> todosNomesPilotos = new Set<String>();
         Set<String> todosNomesOperadores = new Set<String>();
+        Set<Integer> todosIdsAbastecimentosAPI = new Set<Integer>();
         
         for (List<VooData> voosAeronave : voosPorAeronave.values()) {
             for (VooData vooData : voosAeronave) {
@@ -376,6 +377,14 @@ public without sharing class PlaneitAPIService {
                 // Extrair operador (campoCustomizado1)
                 if (String.isNotBlank(vooData.campoCustomizado1)) {
                     todosNomesOperadores.add(vooData.campoCustomizado1.trim());
+                }
+                // Coletar IDs de todos os abastecimentos
+                if (vooData.abastecimentos != null) {
+                    for (AbastecimentoData ab : vooData.abastecimentos) {
+                        if (ab.id != null) {
+                            todosIdsAbastecimentosAPI.add(ab.id);
+                        }
+                    }
                 }
             }
         }
@@ -401,6 +410,18 @@ public without sharing class PlaneitAPIService {
                 WHERE Id_Voo_Planeit__c IN :todosIdsVoosAPI
             ]) {
                 todosVoosExistentes.put(Integer.valueOf(vooExist.Id_Voo_Planeit__c), vooExist);
+            }
+        }
+        
+        // FASE 4.0: BUSCAR TODOS OS ABASTECIMENTOS EXISTENTES
+        Map<Integer, Abastecimento__c> todosAbastecimentosExistentes = new Map<Integer, Abastecimento__c>();
+        if (!todosIdsAbastecimentosAPI.isEmpty()) {
+            for (Abastecimento__c abExist : [
+                SELECT Id, Id_Abastecimento_Planeit__c 
+                FROM Abastecimento__c 
+                WHERE Id_Abastecimento_Planeit__c IN :todosIdsAbastecimentosAPI
+            ]) {
+                todosAbastecimentosExistentes.put(Integer.valueOf(abExist.Id_Abastecimento_Planeit__c), abExist);
             }
         }
         
@@ -431,9 +452,34 @@ public without sharing class PlaneitAPIService {
             }
         }
         
+        // FASE 4.2: IDENTIFICAR ABASTECIMENTOS PARA DELETAR
+        // Buscar abastecimentos no SF vinculados aos voos do período com Id_Abastecimento_Planeit__c preenchido
+        Set<Id> idsVoosExistentes = new Set<Id>();
+        for (Controle_Horas_Voo__c vooExist : todosVoosExistentes.values()) {
+            idsVoosExistentes.add(vooExist.Id);
+        }
+        List<Abastecimento__c> abastecimentosParaDeletar = new List<Abastecimento__c>();
+        if (!idsVoosExistentes.isEmpty()) {
+            for (Abastecimento__c abSF : [
+                SELECT Id, Id_Abastecimento_Planeit__c 
+                FROM Abastecimento__c 
+                WHERE Voo__c IN :idsVoosExistentes 
+                AND Id_Abastecimento_Planeit__c != null
+            ]) {
+                Integer idAbPlaneit = Integer.valueOf(abSF.Id_Abastecimento_Planeit__c);
+                if (!todosIdsAbastecimentosAPI.contains(idAbPlaneit)) {
+                    abastecimentosParaDeletar.add(abSF);
+                }
+            }
+        }
+        
         // FASE 5: PROCESSAR TODOS OS VOOS DE TODAS AS AERONAVES
         List<Controle_Horas_Voo__c> todosVoosParaCriar = new List<Controle_Horas_Voo__c>();
         List<Controle_Horas_Voo__c> todosVoosParaAtualizar = new List<Controle_Horas_Voo__c>();
+        List<Abastecimento__c> todosAbastecimentosParaCriar = new List<Abastecimento__c>();
+        List<Abastecimento__c> todosAbastecimentosParaAtualizar = new List<Abastecimento__c>();
+        // Mapa para resolver abastecimentos de voos novos após o insert (VooData → lista de AbastecimentoData)
+        Map<Integer, List<AbastecimentoData>> abastNovosPorIndexVooNovo = new Map<Integer, List<AbastecimentoData>>();
         
         for (Integer i = 0; i < idsAeronavesPlaneit.size(); i++) {
             Integer idAeronave = idsAeronavesPlaneit[i].intValue();
@@ -494,15 +540,6 @@ public without sharing class PlaneitAPIService {
                 vooRecord.Horas_Voo__c = vooData.horasVooEtapaDecimal; //Mudar para horasVooEtapaDecimal
                 vooRecord.TOT__c = converterTempoParaDecimalHHMM(vooData.horasVooEtapa); //mudar para horasVooEtapa
                 
-                // Campos de abastecimento
-                if (vooData.abastecimentos != null && !vooData.abastecimentos.isEmpty()) {
-                    AbastecimentoData abast = vooData.abastecimentos[0];
-                    vooRecord.Litros_AVGAS__c = abast.quantidade;
-                    vooRecord.Valor_R_L__c = abast.custoUnidade;
-                    vooRecord.Total__c = abast.custoTotal;
-                    vooRecord.Notas__c = abast.documentoReferencia;
-                }
-                
                 // Lookup de Piloto e Operador (usa Map - ZERO queries!)
                 if (String.isNotBlank(nomePiloto)) {
                     vooRecord.Piloto__c = empregadosPorNome.get(nomePiloto.trim());
@@ -515,17 +552,36 @@ public without sharing class PlaneitAPIService {
                 // Adicionar na lista correta
                 if (isUpdate) {
                     todosVoosParaAtualizar.add(vooRecord);
+                    // Processar abastecimentos do voo existente (Id já disponível)
+                    if (vooData.abastecimentos != null) {
+                        for (AbastecimentoData abData : vooData.abastecimentos) {
+                            Abastecimento__c abRecord = construirAbastecimento(abData, vooRecord.Id, todosAbastecimentosExistentes);
+                            if (todosAbastecimentosExistentes.containsKey(abData.id)) {
+                                todosAbastecimentosParaAtualizar.add(abRecord);
+                            } else {
+                                todosAbastecimentosParaCriar.add(abRecord);
+                            }
+                        }
+                    }
                 } else {
+                    Integer indexVooNovo = todosVoosParaCriar.size();
                     todosVoosParaCriar.add(vooRecord);
+                    // Guardar abastecimentos para processar após o insert do voo
+                    if (vooData.abastecimentos != null && !vooData.abastecimentos.isEmpty()) {
+                        abastNovosPorIndexVooNovo.put(indexVooNovo, vooData.abastecimentos);
+                    }
                 }
             }
         }
         
-        // FASE 6: DML ÚNICO PARA VOOS E HORAS TOTAIS
+        // FASE 6: DML ÚNICO PARA VOOS, ABASTECIMENTOS E HORAS TOTAIS
         Integer totalCriados = 0;
         Integer totalAtualizados = 0;
         Integer totalDeletados = 0;
         Integer horasTotaisAtualizadas = 0;
+        Integer totalAbastCriados = 0;
+        Integer totalAbastAtualizados = 0;
+        Integer totalAbastDeletados = 0;
         
         try {
             // 1. Atualizar horas totais das aeronaves
@@ -547,13 +603,41 @@ public without sharing class PlaneitAPIService {
                 totalCriados = todosVoosParaCriar.size();
             }
             
-            // 3. Atualizar TODOS os voos existentes de UMA VEZ
+            // 3. Resolver abastecimentos dos voos recém-criados (agora têm Id)
+            for (Integer idx : abastNovosPorIndexVooNovo.keySet()) {
+                Id vooNovoId = todosVoosParaCriar[idx].Id;
+                for (AbastecimentoData abData : abastNovosPorIndexVooNovo.get(idx)) {
+                    Abastecimento__c abRecord = construirAbastecimento(abData, vooNovoId, todosAbastecimentosExistentes);
+                    // Para voos novos, todos os abastecimentos são inserções
+                    todosAbastecimentosParaCriar.add(abRecord);
+                }
+            }
+            
+            // 4. Inserir TODOS os novos abastecimentos de UMA VEZ
+            if (!todosAbastecimentosParaCriar.isEmpty()) {
+                insert todosAbastecimentosParaCriar;
+                totalAbastCriados = todosAbastecimentosParaCriar.size();
+            }
+            
+            // 5. Atualizar TODOS os abastecimentos existentes de UMA VEZ
+            if (!todosAbastecimentosParaAtualizar.isEmpty()) {
+                update todosAbastecimentosParaAtualizar;
+                totalAbastAtualizados = todosAbastecimentosParaAtualizar.size();
+            }
+            
+            // 6. Deletar abastecimentos que foram removidos do Planeit
+            if (!abastecimentosParaDeletar.isEmpty()) {
+                delete abastecimentosParaDeletar;
+                totalAbastDeletados = abastecimentosParaDeletar.size();
+            }
+            
+            // 7. Atualizar TODOS os voos existentes de UMA VEZ
             if (!todosVoosParaAtualizar.isEmpty()) {
                 update todosVoosParaAtualizar;
                 totalAtualizados = todosVoosParaAtualizar.size();
             }
             
-            // 4. Deletar voos que foram removidos do Planeit
+            // 8. Deletar voos que foram removidos do Planeit
             if (!voosParaDeletar.isEmpty()) {
                 delete voosParaDeletar;
                 totalDeletados = voosParaDeletar.size();
@@ -579,6 +663,9 @@ public without sharing class PlaneitAPIService {
         respostaConsolidada.mensagem = 'Processadas ' + idsAeronavesPlaneit.size() + ' aeronaves. ' +
                                        'Voos - Criados: ' + totalCriados + ', Atualizados: ' + totalAtualizados + 
                                        ', Deletados: ' + totalDeletados + '. ' +
+                                       'Abastecimentos - Criados: ' + totalAbastCriados + 
+                                       ', Atualizados: ' + totalAbastAtualizados +
+                                       ', Deletados: ' + totalAbastDeletados + '. ' +
                                        'Horas Totais atualizadas: ' + horasTotaisAtualizadas;
         
         // Retornar lista com apenas uma resposta consolidada
@@ -588,6 +675,48 @@ public without sharing class PlaneitAPIService {
     // =========================================================================
     // MÉTODOS AUXILIARES
     // =========================================================================
+    
+    /**
+     * @description Constrói ou atualiza um registro Abastecimento__c a partir dos dados da API
+     * @param abData Dados de abastecimento vindos da API
+     * @param vooId Id do Controle_Horas_Voo__c pai
+     * @param existentes Mapa de abastecimentos já existentes no SF
+     * @return Abastecimento__c preenchido (com ou sem Id, dependendo se é insert ou update)
+     */
+    private static Abastecimento__c construirAbastecimento(
+        AbastecimentoData abData, 
+        Id vooId, 
+        Map<Integer, Abastecimento__c> existentes
+    ) {
+        Abastecimento__c ab;
+        if (existentes.containsKey(abData.id)) {
+            ab = existentes.get(abData.id);
+        } else {
+            ab = new Abastecimento__c();
+            ab.Id_Abastecimento_Planeit__c = abData.id;
+            ab.Voo__c = vooId;
+        }
+        
+        ab.Local__c               = abData.localAbastecimento;
+        ab.Origem_Destino__c      = abData.origemDestino;
+        ab.Tipo_Combustivel__c    = abData.tipoAbastecimento;
+        ab.Quantidade__c          = abData.quantidade;
+        ab.Unidade__c             = abData.unidade;
+        ab.Custo_Unitario__c      = abData.custoUnidade;
+        ab.Custo_Total__c         = abData.custoTotal;
+        ab.Documento_Referencia__c = abData.documentoReferencia;
+        ab.Observacoes__c         = abData.observacoes;
+        
+        if (String.isNotBlank(abData.dataVoo)) {
+            try {
+                ab.Data_Voo__c = Date.valueOf(abData.dataVoo);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN, 'Erro ao converter data abastecimento: ' + abData.dataVoo);
+            }
+        }
+        
+        return ab;
+    }
     
     /**
      * @description Busca voos de uma aeronave via API
