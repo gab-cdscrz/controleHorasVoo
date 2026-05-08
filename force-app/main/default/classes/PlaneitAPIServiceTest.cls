@@ -490,13 +490,13 @@ private class PlaneitAPIServiceTest {
         // Assert
         System.assertEquals(true, resultados[0].sucesso, 'Deve ter sucesso');
         
-        List<Controle_Horas_Voo__c> voos = [SELECT Litros_AVGAS__c, Valor_R_L__c, Total__c, Notas__c 
-                                             FROM Controle_Horas_Voo__c];
-        System.assertEquals(1, voos.size(), 'Deve criar 1 voo');
-        System.assertEquals(257.00, voos[0].Litros_AVGAS__c, 'Litros deve ser 257');
-        System.assertEquals(13.40, voos[0].Valor_R_L__c, 'Valor unitÃ¡rio deve ser 13.40');
-        System.assertEquals(3443.80, voos[0].Total__c, 'Total deve ser 3443.80');
-        System.assertEquals('NF 12345', voos[0].Notas__c, 'Notas deve ser NF 12345');
+        List<Abastecimento__c> abastecimentos = [SELECT Quantidade__c, Custo_Unitario__c, Custo_Total__c, Documento_Referencia__c 
+                                                  FROM Abastecimento__c];
+        System.assertEquals(1, abastecimentos.size(), 'Deve criar 1 abastecimento');
+        System.assertEquals(257.00, abastecimentos[0].Quantidade__c, 'Litros deve ser 257');
+        System.assertEquals(13.40, abastecimentos[0].Custo_Unitario__c, 'Valor unitário deve ser 13.40');
+        System.assertEquals(3443.80, abastecimentos[0].Custo_Total__c, 'Total deve ser 3443.80');
+        System.assertEquals('NF 12345', abastecimentos[0].Documento_Referencia__c, 'Documento deve ser NF 12345');
     }
     
     @IsTest

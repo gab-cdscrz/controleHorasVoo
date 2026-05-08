@@ -49,10 +49,7 @@ public class ControleHorasVooTest {
         controller01.controleHoras.Tipo__c = 'SA';
         controller01.controleHoras.Litros_AVGAS__c = 50;
         controller01.controleHoras.Valor_R_L__c = 7.25;
-        controller01.recalcularValores();
         controller01.salvarControleHoras();
-        controller01.abaAtiva = 'controles';
-        controller01.carregarControlesExistentes();
         Test.stopTest();
         
         System.assert(controller01.registroSalvo);
@@ -123,9 +120,9 @@ public class ControleHorasVooTest {
         controller.controleHoras.Data_do_Voo__c = baseDate();
         controller.controleHoras.Acionamento__c = Time.newInstance(8, 0, 0, 0);
         controller.controleHoras.Corte__c = Time.newInstance(9, 0, 0, 0);
+        controller.controleHoras.Piloto__c = empregadoPiloto.Id;
         controller.controleHoras.Tipo__c = 'SA';
         controller.controleHoras.Horas_Voo__c = 1;
-        controller.recalcularValores();
         controller.salvarControleHoras();
         
         Id controleId = controller.controleHoras.Id;
@@ -141,32 +138,58 @@ public class ControleHorasVooTest {
         
         // efetivamente salvar a edição (novo insert) mudando horas
         controller2.controleHoras.Horas_Voo__c = 2;
-        controller2.recalcularValores();
         controller2.salvarControleHoras();
         
         System.assertEquals(false, controller2.modoEdicao);
         System.assert(controller2.controleHoras.Id != null);
     }
     
-    // Filtros e visualização hierárquica
+    // Faturamento de abastecimento e reload de detalhes do modal
     @isTest
     public static void testFiltrosEVisualizacaoHierarquica(){
         empregado__c empregadoPiloto = TestDataStatic.empregadoPiloto;
         Aeronave__c aeronave = TestDataStatic.aeronaveteste;
         setSession(empregadoPiloto.login__c);
         
-        insert new List<Controle_Horas_Voo__c>{
-            new Controle_Horas_Voo__c(Aeronave__c = aeronave.Id, Data_do_Voo__c = Date.today(), Piloto__c = empregadoPiloto.Id, Tipo__c = 'SA', Horas_Voo__c = 1.5, TOT__c = 1.5),
-            new Controle_Horas_Voo__c(Aeronave__c = aeronave.Id, Data_do_Voo__c = Date.today().addMonths(-1), Piloto__c = empregadoPiloto.Id, Tipo__c = 'TR', Horas_Voo__c = 2.0, TOT__c = 2.0)
-        };
+        Date base = baseDate();
+        
+        Controle_Horas_Voo__c voo = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id, Data_do_Voo__c = base,
+            Piloto__c = empregadoPiloto.Id, Tipo__c = 'SA',
+            Horas_Voo__c = 1.5, TOT__c = 1.5
+        );
+        insert voo;
+        
+        Abastecimento__c ab = new Abastecimento__c(
+            Voo__c = voo.Id, Data_Voo__c = base,
+            Quantidade__c = 150, Custo_Unitario__c = 6.50,
+            Faturado__c = false
+        );
+        insert ab;
+        
+        PageReference p = Page.ControleHorasVoo;
+        p.getParameters().put('dia', String.valueOf(base.day()));
+        p.getParameters().put('abastecimentoId', ab.Id);
+        Test.setCurrentPage(p);
         
         ControleHorasVooController controller = new ControleHorasVooController();
-        controller.filtroAeronaveId = aeronave.Id;
-        controller.filtroAno = baseDate().year();
-        controller.filtroMes = baseDate().month();
-        controller.carregarControlesExistentes();
+        controller.filtroAeronaveIdCalendario = aeronave.Id;
+        controller.filtroAnoCalendario = String.valueOf(base.year());
+        controller.filtroMesCalendario = String.valueOf(base.month());
+        controller.aplicarFiltrosCalendario();
+        controller.visualizarDia();
+        System.assert(controller.exibirModal);
         
-        System.assert(controller.controlesOrganizados != null);
+        // Cobre alternarFaturamentoAbastecimento + recarregarControlesDetalhes (privado)
+        controller.alternarFaturamentoAbastecimento();
+        Abastecimento__c abAtualizado = [SELECT Faturado__c FROM Abastecimento__c WHERE Id = :ab.Id];
+        System.assertEquals(true, abAtualizado.Faturado__c);
+        
+        // Cobre temInspecoes e selecionarAeronaveManutencao
+        controller.aeronaveIdManutencao = aeronave.Id;
+        controller.selecionarAeronaveManutencao();
+        System.assertNotEquals(null, controller.inspecoesAeronave);
+        System.assertEquals(false, controller.temInspecoes);
     }
     
     // Validações mínimas e comportamento ao aplicar filtros de calendário sem aeronave
@@ -223,11 +246,11 @@ public class ControleHorasVooTest {
         controller.selecionarAeronave();
         controller.somenteAbastecimento = true;
         controller.controleHoras.Data_do_Voo__c = baseDate();
-        controller.controleHoras.Aeronave__c = aeronave.Id; // Garantir que aeronave está definida
+        controller.controleHoras.Aeronave__c = aeronave.Id;
+        controller.controleHoras.Piloto__c = empregadoPiloto.Id;
         controller.controleHoras.Litros_AVGAS__c = 100;
         controller.controleHoras.Valor_R_L__c = 7.00;
-        controller.controleHoras.Descricao__c = 'Abastecimento teste'; // Adicionar descrição para passar validação
-        controller.recalcularValores();
+        controller.controleHoras.Descricao__c = 'Abastecimento teste';
         controller.salvarControleHoras();
         Test.stopTest();
         
@@ -651,7 +674,7 @@ public class ControleHorasVooTest {
         
         ControleHorasVooController controller = new ControleHorasVooController();
         controller.aeronaveId = null;
-        controller.recalcularValores();
+        controller.selecionarAeronave(); // retorna early quando aeronaveId é null
         
         // Não deve dar erro
         System.assertEquals(0, controller.totalHorasVooMes);

@@ -58,6 +58,11 @@ public without sharing class ControleHorasVooController {
         set;
     }
     
+    public Boolean camposEditaveis {
+        get { return camposHabilitados && !registroSalvo; }
+        set;
+    }
+    
     public String tituloFormulario { 
         get { 
             if (modoEdicao) {
