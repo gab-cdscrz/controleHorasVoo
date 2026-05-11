@@ -140,7 +140,7 @@ public class ControleHorasVooTest {
         controller2.controleHoras.Horas_Voo__c = 2;
         controller2.salvarControleHoras();
         
-        System.assertEquals(false, controller2.modoEdicao);
+        System.assertEquals(true, controller2.modoEdicao);
         System.assert(controller2.controleHoras.Id != null);
     }
     
@@ -678,5 +678,118 @@ public class ControleHorasVooTest {
         
         // Não deve dar erro
         System.assertEquals(0, controller.totalHorasVooMes);
+    }
+
+    // ===========================================================================
+    // TESTES DE PROTEÇÃO MANUAL (Editado_Manualmente__c)
+    // ===========================================================================
+
+    /**
+     * Editar um voo via Controller deve setar Editado_Manualmente__c = true
+     */
+    @isTest
+    public static void testEdicaoSetaFlagEditadoManualmente() {
+        empregado__c empregadoPiloto = TestDataStatic.empregadoPiloto;
+        Aeronave__c aeronave = TestDataStatic.aeronaveteste;
+        setSession(empregadoPiloto.login__c);
+
+        // 1. Criar voo original (sem flag)
+        Controle_Horas_Voo__c voo = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Data_do_Voo__c = Date.today(),
+            Piloto__c = empregadoPiloto.Id,
+            Tipo__c = 'SA',
+            Horas_Voo__c = 1,
+            Editado_Manualmente__c = false
+        );
+        insert voo;
+
+        // 2. Abrir modo edição via Controller
+        PageReference pageRef = Page.ControleHorasVoo;
+        pageRef.getParameters().put('controleId', String.valueOf(voo.Id));
+        Test.setCurrentPage(pageRef);
+
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.editarControle();
+
+        System.assert(controller.modoEdicao, 'Deve estar em modo edição');
+
+        // 3. Salvar a edição
+        Test.startTest();
+        controller.controleHoras.DEP__c = 'NOVA';
+        controller.salvarControleHoras();
+        Test.stopTest();
+
+        // 4. Verificar flag
+        Controle_Horas_Voo__c vooAtualizado = [
+            SELECT Editado_Manualmente__c, DEP__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id = :voo.Id
+        ];
+        System.assertEquals(true, vooAtualizado.Editado_Manualmente__c,
+            'Edição manual deve setar Editado_Manualmente__c = true');
+        System.assertEquals('NOVA', vooAtualizado.DEP__c,
+            'Dados do usuário devem ter sido salvos');
+    }
+
+    /**
+     * Editar um abastecimento existente via Controller deve setar Editado_Manualmente__c = true
+     */
+    @isTest
+    public static void testEdicaoAbastecimentoSetaFlagEditadoManualmente() {
+        empregado__c empregadoPiloto = TestDataStatic.empregadoPiloto;
+        Aeronave__c aeronave = TestDataStatic.aeronaveteste;
+        setSession(empregadoPiloto.login__c);
+
+        // 1. Criar voo e abastecimento
+        Controle_Horas_Voo__c voo = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Data_do_Voo__c = Date.today(),
+            Piloto__c = empregadoPiloto.Id,
+            Tipo__c = 'SA',
+            Horas_Voo__c = 1
+        );
+        insert voo;
+
+        Abastecimento__c ab = new Abastecimento__c(
+            Voo__c = voo.Id,
+            Data_Voo__c = Date.today(),
+            Quantidade__c = 100,
+            Custo_Unitario__c = 10,
+            Editado_Manualmente__c = false
+        );
+        insert ab;
+
+        // 2. Abrir modo edição via Controller
+        PageReference pageRef = Page.ControleHorasVoo;
+        pageRef.getParameters().put('controleId', String.valueOf(voo.Id));
+        Test.setCurrentPage(pageRef);
+
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.editarControle();
+
+        // 3. Simular edição do abastecimento (via lista abastecimentosEdicao + backup de IDs)
+        controller.abastecimentosEdicao = new List<Abastecimento__c>{
+            new Abastecimento__c(
+                Quantidade__c = 200,
+                Custo_Unitario__c = 15
+            )
+        };
+        controller.abastecimentoIdsBackup = new List<Id>{ ab.Id };
+
+        Test.startTest();
+        controller.salvarControleHoras();
+        Test.stopTest();
+
+        // 4. Verificar flag no abastecimento
+        Abastecimento__c abAtualizado = [
+            SELECT Editado_Manualmente__c, Quantidade__c
+            FROM Abastecimento__c
+            WHERE Id = :ab.Id
+        ];
+        System.assertEquals(true, abAtualizado.Editado_Manualmente__c,
+            'Edição manual do abastecimento deve setar Editado_Manualmente__c = true');
+        System.assertEquals(200, abAtualizado.Quantidade__c,
+            'Quantidade corrigida pelo usuário deve ter sido salva');
     }
 }

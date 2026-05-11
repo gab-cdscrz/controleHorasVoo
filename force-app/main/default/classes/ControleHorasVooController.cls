@@ -53,7 +53,7 @@ public without sharing class ControleHorasVooController {
     public Id abastecimentoOriginalId { get; set; }  // backup do Id (padrão idBackup)
     // Lista de abastecimentos para edição (suporta múltiplos registros)
     public List<Abastecimento__c> abastecimentosEdicao { get; set; }
-    private List<Id> abastecimentoIdsBackup;
+    public List<Id> abastecimentoIdsBackup;
     
     // Propriedades calculadas
     public Boolean camposHabilitados { 
@@ -418,6 +418,8 @@ public without sharing class ControleHorasVooController {
             if (modoEdicao && controleOriginalId != null) {
                 // MODO EDIÇÃO: restaura o Id e executa UPDATE
                 controleHoras.Id = controleOriginalId;
+                // Marcar que este registro foi editado manualmente — protege contra sobrescrita do Planeit
+                controleHoras.Editado_Manualmente__c = true;
                 
                 // 1. Atualizar horas da aeronave pelo diff (novas - originais)
                 if (aeronave?.Id != null) {
@@ -512,6 +514,8 @@ public without sharing class ControleHorasVooController {
             Id backupId = (abastecimentoIdsBackup != null && i < abastecimentoIdsBackup.size()) ? abastecimentoIdsBackup[i] : null;
             if (backupId != null) {
                 ab.Id = backupId;
+                // Marcar que este abastecimento foi editado manualmente — protege contra sobrescrita do Planeit
+                ab.Editado_Manualmente__c = true;
                 toUpdate.add(ab);
             } else {
                 toInsert.add(ab);
