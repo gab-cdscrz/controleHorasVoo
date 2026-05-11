@@ -490,13 +490,13 @@ private class PlaneitAPIServiceTest {
         // Assert
         System.assertEquals(true, resultados[0].sucesso, 'Deve ter sucesso');
         
-        List<Controle_Horas_Voo__c> voos = [SELECT Litros_AVGAS__c, Valor_R_L__c, Total__c, Notas__c 
-                                             FROM Controle_Horas_Voo__c];
-        System.assertEquals(1, voos.size(), 'Deve criar 1 voo');
-        System.assertEquals(257.00, voos[0].Litros_AVGAS__c, 'Litros deve ser 257');
-        System.assertEquals(13.40, voos[0].Valor_R_L__c, 'Valor unitÃ¡rio deve ser 13.40');
-        System.assertEquals(3443.80, voos[0].Total__c, 'Total deve ser 3443.80');
-        System.assertEquals('NF 12345', voos[0].Notas__c, 'Notas deve ser NF 12345');
+        List<Abastecimento__c> abastecimentos = [SELECT Quantidade__c, Custo_Unitario__c, Custo_Total__c, Documento_Referencia__c 
+                                                  FROM Abastecimento__c];
+        System.assertEquals(1, abastecimentos.size(), 'Deve criar 1 abastecimento');
+        System.assertEquals(257.00, abastecimentos[0].Quantidade__c, 'Litros deve ser 257');
+        System.assertEquals(13.40, abastecimentos[0].Custo_Unitario__c, 'Valor unitário deve ser 13.40');
+        System.assertEquals(3443.80, abastecimentos[0].Custo_Total__c, 'Total deve ser 3443.80');
+        System.assertEquals('NF 12345', abastecimentos[0].Documento_Referencia__c, 'Documento deve ser NF 12345');
     }
     
     @IsTest
@@ -965,5 +965,137 @@ private class PlaneitAPIServiceTest {
         // Assert
         System.assertNotEquals(null, respostas, 'Deve retornar respostas');
         System.assertEquals(true, respostas[0].sucesso, 'Deve sincronizar com sucesso');
+    }
+
+    // =========================================================================
+    // TESTES DE PROTEÇÃO CONTRA SOBRESCRITA (Editado_Manualmente__c)
+    // =========================================================================
+
+    /**
+     * Voo com Editado_Manualmente__c = true não deve ser sobrescrito pela sync
+     */
+    @IsTest
+    static void testVooEditadoManualmenteNaoEAtualizado() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new MultiEndpointMock());
+
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        // Voo existente com flag ativado e dados diferentes dos que virarão da API
+        Controle_Horas_Voo__c vooProtegido = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            DEP__c = 'CORR',
+            ARR__c = 'MANU',
+            Editado_Manualmente__c = true
+        );
+        insert vooProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert: registro protegido não deve ter sido sobrescrito
+        Controle_Horas_Voo__c vooAposSync = [SELECT DEP__c, ARR__c, Editado_Manualmente__c FROM Controle_Horas_Voo__c WHERE Id = :vooProtegido.Id];
+        System.assertEquals('CORR', vooAposSync.DEP__c, 'DEP não deve ser sobrescrito pela sync');
+        System.assertEquals('MANU', vooAposSync.ARR__c, 'ARR não deve ser sobrescrito pela sync');
+        System.assertEquals(true, vooAposSync.Editado_Manualmente__c, 'Flag deve permanecer ativo');
+    }
+
+    /**
+     * Voo com Editado_Manualmente__c = true que sumiu do Planeit não deve ser deletado
+     */
+    @IsTest
+    static void testVooEditadoManualmenteNaoEDeletado() {
+        // Arrange: Mock que não retorna o voo 94611 (simula deleção no Planeit)
+        Test.setMock(HttpCalloutMock.class, new EmptyVoosMock());
+
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        Controle_Horas_Voo__c vooProtegido = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 21),
+            DEP__c = 'CORR',
+            Editado_Manualmente__c = true
+        );
+        insert vooProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert: registro protegido não deve ter sido deletado
+        List<Controle_Horas_Voo__c> voosRestantes = [
+            SELECT Id FROM Controle_Horas_Voo__c WHERE Id = :vooProtegido.Id
+        ];
+        System.assertEquals(1, voosRestantes.size(), 'Voo editado manualmente não deve ser deletado pelo sync');
+    }
+
+    /**
+     * Abastecimento com Editado_Manualmente__c = true não deve ser sobrescrito
+     * quando o voo pai não está protegido
+     */
+    @IsTest
+    static void testAbastecimentoEditadoManualmenteNaoEAtualizado() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new MultiEndpointMock());
+
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        // Voo existente SEM proteção (pode ser atualizado)
+        Controle_Horas_Voo__c voo = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            DEP__c = 'OLD',
+            Editado_Manualmente__c = false
+        );
+        insert voo;
+
+        // Abastecimento existente COM proteção
+        Abastecimento__c abProtegido = new Abastecimento__c(
+            Voo__c = voo.Id,
+            Id_Abastecimento_Planeit__c = 24747,
+            Quantidade__c = 999,
+            Custo_Unitario__c = 99,
+            Editado_Manualmente__c = true
+        );
+        insert abProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert: abastecimento protegido não deve ter sido sobrescrito
+        Abastecimento__c abAposSync = [SELECT Quantidade__c, Editado_Manualmente__c FROM Abastecimento__c WHERE Id = :abProtegido.Id];
+        System.assertEquals(999, abAposSync.Quantidade__c, 'Quantidade do abastecimento não deve ser sobrescrita');
+        System.assertEquals(true, abAposSync.Editado_Manualmente__c, 'Flag do abastecimento deve permanecer ativo');
     }
 }
