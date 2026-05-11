@@ -51,6 +51,9 @@ public without sharing class ControleHorasVooController {
     // Propriedade para o registro filho de Abastecimento
     public Abastecimento__c abastecimentoAtual { get; set; }
     public Id abastecimentoOriginalId { get; set; }  // backup do Id (padrão idBackup)
+    // Lista de abastecimentos para edição (suporta múltiplos registros)
+    public List<Abastecimento__c> abastecimentosEdicao { get; set; }
+    private List<Id> abastecimentoIdsBackup;
     
     // Propriedades calculadas
     public Boolean camposHabilitados { 
@@ -132,6 +135,7 @@ public without sharing class ControleHorasVooController {
         public Boolean temAbastecimento { get; set; }
         // true somente quando há pelo menos 1 abastecimento E todos têm Faturado__c = true
         public Boolean todosFaturados { get; set; }
+        public List<Abastecimento__c> abastecimentos { get; set; }
         
         public ControleCalendarioWrapper(Controle_Horas_Voo__c c) {
             this.controle = c;
@@ -140,6 +144,7 @@ public without sharing class ControleHorasVooController {
             this.qtdAbastecimentos = 0;
             this.temAbastecimento = false;
             this.todosFaturados = false;
+            this.abastecimentos = new List<Abastecimento__c>();
             if (c.Abastecimentos__r != null) {
                 Boolean allFaturados = true;
                 for (Abastecimento__c ab : c.Abastecimentos__r) {
@@ -147,6 +152,7 @@ public without sharing class ControleHorasVooController {
                     if (ab.Custo_Total__c != null) this.totalValorAbast += ab.Custo_Total__c;
                     if (ab.Faturado__c != true) allFaturados = false;
                     this.qtdAbastecimentos++;
+                    this.abastecimentos.add(ab);
                 }
                 this.temAbastecimento = this.qtdAbastecimentos > 0;
                 this.todosFaturados = this.temAbastecimento && allFaturados;
@@ -165,6 +171,8 @@ public without sharing class ControleHorasVooController {
     private void inicializarObjetos() {
         controleHoras = new Controle_Horas_Voo__c();
         abastecimentoAtual = new Abastecimento__c();
+        abastecimentosEdicao = new List<Abastecimento__c>();
+        abastecimentoIdsBackup = new List<Id>();
         aeronave = new Aeronave__c();
         aeronaveManutencao = new Aeronave__c();
         inspecoesAeronave = new List<Inspecao_Aeronave__c>();
@@ -423,8 +431,8 @@ public without sharing class ControleHorasVooController {
                 // 2. Atualizar o registro existente
                 update controleHoras;
                 
-                // 3. Salvar/atualizar abastecimento se houver dados
-                salvarAbastecimento(controleHoras.Id, controleHoras.Data_do_Voo__c);
+                // 3. Salvar/atualizar abastecimentos (suporta múltiplos registros)
+                salvarAbastecimentosEdicao(controleHoras.Id, controleHoras.Data_do_Voo__c);
                 
                 // 4. Mensagem de sucesso
                 ApexPages.addMessage(new ApexPages.Message(
@@ -432,10 +440,7 @@ public without sharing class ControleHorasVooController {
                     '✓ Controle atualizado com sucesso!'
                 ));
                 
-                // 5. Limpar flags de edição
-                modoEdicao = false;
-                controleOriginalId = null;
-                horasOriginaisAeronave = null;
+                // 5. Manter modoEdicao = true para exibir todos os abastecimentos pós-save
                 
             } else {
                 // FLUXO NORMAL: novo registro
@@ -486,6 +491,37 @@ public without sharing class ControleHorasVooController {
         }
     }
     
+    // Salva múltiplos abastecimentos no modo edição (padrão idBackup para lista)
+    private void salvarAbastecimentosEdicao(Id vooId, Date dataVoo) {
+        if (abastecimentosEdicao == null || abastecimentosEdicao.isEmpty()) {
+            salvarAbastecimento(vooId, dataVoo);
+            return;
+        }
+        List<Abastecimento__c> toUpdate = new List<Abastecimento__c>();
+        List<Abastecimento__c> toInsert = new List<Abastecimento__c>();
+        for (Integer i = 0; i < abastecimentosEdicao.size(); i++) {
+            Abastecimento__c ab = abastecimentosEdicao[i];
+            Boolean temDados = ab.Quantidade__c != null || ab.Custo_Unitario__c != null;
+            if (!temDados) continue;
+            // Recalcular Custo Total antes de salvar
+            if (ab.Quantidade__c != null && ab.Custo_Unitario__c != null) {
+                ab.Custo_Total__c = ab.Quantidade__c * ab.Custo_Unitario__c;
+            }
+            ab.Voo__c = vooId;
+            ab.Data_Voo__c = dataVoo;
+            Id backupId = (abastecimentoIdsBackup != null && i < abastecimentoIdsBackup.size()) ? abastecimentoIdsBackup[i] : null;
+            if (backupId != null) {
+                ab.Id = backupId;
+                toUpdate.add(ab);
+            } else {
+                toInsert.add(ab);
+            }
+        }
+        if (!toUpdate.isEmpty()) update toUpdate;
+        if (!toInsert.isEmpty()) insert toInsert;
+        abastecimentoIdsBackup = new List<Id>();
+    }
+
     // Validação de campos obrigatórios
     private Boolean validarCamposObrigatorios() {
         List<String> erros = new List<String>();
@@ -523,6 +559,18 @@ public without sharing class ControleHorasVooController {
             ];
         }
         
+        // Recarregar abastecimentos do banco após salvar em modo edição
+        if (modoEdicao && controleHoras.Id != null) {
+            abastecimentosEdicao = [
+                SELECT Id, Quantidade__c, Custo_Unitario__c, Custo_Total__c,
+                       Tipo_Combustivel__c, Local__c, Origem_Destino__c,
+                       Documento_Referencia__c, Observacoes__c
+                FROM Abastecimento__c
+                WHERE Voo__c = :controleHoras.Id
+                ORDER BY Id ASC
+            ];
+        }
+        
         // CONSOLIDADO: Todos os cálculos em um só lugar
         calcularTotaisMes();
         // Dados técnicos vêm do banco, não são calculados
@@ -554,6 +602,8 @@ public without sharing class ControleHorasVooController {
         controleHoras = new Controle_Horas_Voo__c();
         abastecimentoAtual = new Abastecimento__c();
         abastecimentoOriginalId = null;
+        abastecimentosEdicao = new List<Abastecimento__c>();
+        abastecimentoIdsBackup = new List<Id>();
         controleHoras.Data_do_Voo__c = Date.today();
         registroSalvo = false;
         somenteAbastecimento = false;
@@ -841,23 +891,26 @@ public without sharing class ControleHorasVooController {
             // 4. Limpar campo totalizador calc para ser recalculado
             controleHoras.Total_Horas_Voo__c = null;
             
-            // 5. Carregar o Abastecimento__c filho (se existir)
-            List<Abastecimento__c> absFilho = [
+            // 5. Carregar todos os Abastecimento__c filhos (sem LIMIT)
+            List<Abastecimento__c> absFilhos = [
                 SELECT Id, Quantidade__c, Custo_Unitario__c, Custo_Total__c,
                        Tipo_Combustivel__c, Local__c, Origem_Destino__c,
                        Documento_Referencia__c, Observacoes__c, Faturado__c
                 FROM Abastecimento__c
                 WHERE Voo__c = :controleOriginalId
-                LIMIT 1
+                ORDER BY Id ASC
             ];
-            abastecimentoAtual = absFilho.isEmpty() ? new Abastecimento__c() : absFilho[0];
-            // Padrão idBackup para o filho: guarda o Id e remove do form
-            if (abastecimentoAtual.Id != null) {
-                abastecimentoOriginalId = abastecimentoAtual.Id;
-                abastecimentoAtual.Id = null;
-            } else {
-                abastecimentoOriginalId = null;
+            // Padrão idBackup para múltiplos filhos
+            abastecimentosEdicao = new List<Abastecimento__c>();
+            abastecimentoIdsBackup = new List<Id>();
+            for (Abastecimento__c ab : absFilhos) {
+                abastecimentoIdsBackup.add(ab.Id);
+                ab.Id = null;
+                abastecimentosEdicao.add(ab);
             }
+            // Manter abastecimentoAtual para compatibilidade (aponta para o primeiro item)
+            abastecimentoAtual = abastecimentosEdicao.isEmpty() ? new Abastecimento__c() : abastecimentosEdicao[0];
+            abastecimentoOriginalId = abastecimentoIdsBackup.isEmpty() ? null : abastecimentoIdsBackup[0];
             
             // 6. Ativar modo edição e flags
             modoEdicao = true;

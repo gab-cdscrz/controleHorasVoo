@@ -2829,29 +2829,29 @@
                                                                             <apex:outputText escape="false" value='<div class="horas-voo" title="Horas de Voo: {0, number, #,##0.0}"><span>{0, number, #,##0.0}h</span></div>'>
                                                                                 <apex:param value="{!controle.controle.Horas_voo__c}"/>
                                                                             </apex:outputText>
+                                                                            <apex:outputPanel rendered="{!NOT(ISBLANK(controle.controle.Tipo__c))}">
+                                                                                <span class="tipo-voo tipo-{!controle.controle.Tipo__c}" title="Tipo: {!IF(controle.controle.Tipo__c == 'AB', 'Abastecimento', controle.controle.Tipo__c)}"><apex:outputText escape="false" value="{!IF(controle.controle.Tipo__c == 'AB', '&#9981; ABASTECIMENTO ', controle.controle.Tipo__c)}"/></span>
+                                                                            </apex:outputPanel>
                                                                             <apex:outputPanel rendered="{!AND(NOT(ISBLANK(controle.controle.DEP__c)), NOT(ISBLANK(controle.controle.ARR__c)))}">
                                                                                 <div class="rota" title="Acionamento: {!IF(controle.controle.Acionamento__c != null, LEFT(TEXT(controle.controle.Acionamento__c), 5), '--:--')} → Corte: {!IF(controle.controle.Corte__c != null, LEFT(TEXT(controle.controle.Corte__c), 5), '--:--')} | DEP: {!controle.controle.DEP__c} → ARR: {!controle.controle.ARR__c}">
                                                                                     {!IF(controle.controle.Acionamento__c != null, LEFT(TEXT(controle.controle.Acionamento__c), 5), '--:--')} - {!IF(controle.controle.Corte__c != null, LEFT(TEXT(controle.controle.Corte__c), 5), '--:--')} | {!controle.controle.DEP__c} → {!controle.controle.ARR__c}
                                                                                 </div>
                                                                             </apex:outputPanel>
-                                                                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                                                                <apex:outputPanel rendered="{!NOT(ISBLANK(controle.controle.Tipo__c))}">
-                                                                                    <span class="tipo-voo tipo-{!controle.controle.Tipo__c}" title="Tipo: {!IF(controle.controle.Tipo__c == 'AB', 'Abastecimento', controle.controle.Tipo__c)}"><apex:outputText escape="false" value="{!IF(controle.controle.Tipo__c == 'AB', '&#9981; ABASTECIMENTO ', controle.controle.Tipo__c)}"/></span>
-                                                                                </apex:outputPanel>
-                                                                                <apex:outputPanel rendered="{!controle.temAbastecimento}">
-                                                                                    <span class="combustivel-info" title="{!controle.qtdAbastecimentos} abastecimento(s)">
+                                                                            <apex:outputPanel rendered="{!controle.temAbastecimento}">
+                                                                                <apex:repeat value="{!controle.abastecimentos}" var="ab">
+                                                                                    <div class="combustivel-info">
+                                                                                        <apex:outputText value="{!IF(ab.Faturado__c, '✓', '✕')} "/>
                                                                                         <apex:outputText value="{0, number, #,##0.0}L">
-                                                                                            <apex:param value="{!controle.totalLitrosAbast}"/>
+                                                                                            <apex:param value="{!ab.Quantidade__c}"/>
                                                                                         </apex:outputText>
-                                                                                        <apex:outputText rendered="{!controle.totalValorAbast > 0}" value=" • R$ {0, number, #,##0.00}">
-                                                                                            <apex:param value="{!controle.totalValorAbast}"/>
-                                                                                        </apex:outputText>
-                                                                                        <apex:outputPanel rendered="{!controle.qtdAbastecimentos > 1}">
-                                                                                            <span class="abast-badge">({!controle.qtdAbastecimentos} abast.)</span>
+                                                                                        <apex:outputPanel rendered="{!ab.Custo_Total__c > 0}">
+                                                                                            <apex:outputText value=" • R$ {0, number, #,##0.00}">
+                                                                                                <apex:param value="{!ab.Custo_Total__c}"/>
+                                                                                            </apex:outputText>
                                                                                         </apex:outputPanel>
-                                                                                    </span>
-                                                                                </apex:outputPanel>
-                                                                            </div>
+                                                                                    </div>
+                                                                                </apex:repeat>
+                                                                            </apex:outputPanel>
                                                                             <div class="descricao-voo" title="Descrição: {!controle.controle.Descricao__c}">{!controle.controle.Descricao__c}</div>
                                                                             
                                                                             <!-- Status de Faturamento (baseado nos abastecimentos filhos) -->
@@ -3646,126 +3646,262 @@
                                             ⛽ Dados de Abastecimento
                                         </div>
                                         <div class="card-body">
-                                            <div class="form-row">
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Quantidade (L)</label>
-                                                    <apex:inputField value="{!abastecimentoAtual.Quantidade__c}" 
-                                                                     styleClass="form-control" 
-                                                                     id="abQtd"
-                                                                     html-placeholder="Ex: 100"
-                                                                     rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <apex:outputText value="{!abastecimentoAtual.Quantidade__c}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+
+                                            <!-- MODO EDIÇÃO: iterar sobre todos os abastecimentos vinculados -->
+                                            <apex:outputPanel rendered="{!AND(modoEdicao, !registroSalvo)}">
+                                                <apex:outputPanel rendered="{!abastecimentosEdicao.size == 0}">
+                                                    <p style="color:#6c757d; font-style:italic; padding: 8px 0;">Nenhum abastecimento vinculado a este voo.</p>
+                                                </apex:outputPanel>
+                                                <apex:repeat value="{!abastecimentosEdicao}" var="ab">
+                                                    <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Quantidade (L)</label>
+                                                                <apex:inputField value="{!ab.Quantidade__c}" 
+                                                                                 styleClass="form-control"
+                                                                                 html-placeholder="Ex: 100"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Custo Unitário (R$/L)</label>
+                                                                <apex:inputField value="{!ab.Custo_Unitario__c}" 
+                                                                                 styleClass="form-control"
+                                                                                 html-placeholder="Ex: 10,00 ou 10.00"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Custo Total (R$)</label>
+                                                                <apex:outputText value="{!ab.Custo_Total__c}" 
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Tipo Combustível</label>
+                                                                <apex:inputField value="{!ab.Tipo_Combustivel__c}" 
+                                                                                 styleClass="form-control"
+                                                                                 html-placeholder="Ex: AVGAS, JET A, JET A-1, SAF"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Local</label>
+                                                                <apex:inputField value="{!ab.Local__c}" 
+                                                                                 styleClass="form-control"
+                                                                                 html-placeholder="Ex: SNAX"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Origem/Destino</label>
+                                                                <apex:inputField value="{!ab.Origem_Destino__c}" 
+                                                                                 styleClass="form-select"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Documento de Referência</label>
+                                                                <apex:inputTextarea value="{!ab.Documento_Referencia__c}" 
+                                                                                    styleClass="form-control"
+                                                                                    style="resize: vertical; min-height: 70px;"
+                                                                                    html-placeholder="Ex: NF 12345"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Observações de Abastecimento</label>
+                                                                <apex:inputField value="{!ab.Observacoes__c}" 
+                                                                                 styleClass="form-control"
+                                                                                 style="resize: vertical; min-height: 70px;"
+                                                                                 html-placeholder="Campo opcional — preencha apenas se necessário"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </apex:repeat>
+                                            </apex:outputPanel>
+
+                                            <!-- PÓS-SAVE EM MODO EDIÇÃO: exibir todos os abastecimentos salvos (read-only) -->
+                                            <apex:outputPanel rendered="{!AND(modoEdicao, registroSalvo)}">
+                                                <apex:outputPanel rendered="{!abastecimentosEdicao.size == 0}">
+                                                    <p style="color:#6c757d; font-style:italic; padding: 8px 0;">Nenhum abastecimento vinculado a este voo.</p>
+                                                </apex:outputPanel>
+                                                <apex:repeat value="{!abastecimentosEdicao}" var="ab">
+                                                    <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Quantidade (L)</label>
+                                                                <apex:outputText value="{!ab.Quantidade__c}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Custo Unitário (R$/L)</label>
+                                                                <apex:outputText value="{!ab.Custo_Unitario__c}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Custo Total (R$)</label>
+                                                                <apex:outputText value="{!ab.Custo_Total__c}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Tipo Combustível</label>
+                                                                <apex:outputText value="{!IF(ab.Tipo_Combustivel__c != null, ab.Tipo_Combustivel__c, '-- Não informado --')}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Local</label>
+                                                                <apex:outputText value="{!IF(ab.Local__c != null, ab.Local__c, '-- Não informado --')}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Origem/Destino</label>
+                                                                <apex:outputText value="{!IF(ab.Origem_Destino__c != null, ab.Origem_Destino__c, '-- Não informado --')}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-row">
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Documento de Referência</label>
+                                                                <apex:outputText value="{!IF(ab.Documento_Referencia__c != null, ab.Documento_Referencia__c, '-- Não informado --')}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"/>
+                                                            </div>
+                                                            <div class="form-group half-width">
+                                                                <label class="form-label">Observações de Abastecimento</label>
+                                                                <apex:outputText value="{!IF(ab.Observacoes__c != null, ab.Observacoes__c, '-- Não informado --')}"
+                                                                                 styleClass="form-control readonly-field"
+                                                                                 style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </apex:repeat>
+                                            </apex:outputPanel>
+
+                                            <!-- MODO NOVO REGISTRO ou PÓS-SAVE: único abastecimento -->
+                                            <apex:outputPanel rendered="{!!modoEdicao}">
+                                                <div class="form-row">
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Quantidade (L)</label>
+                                                        <apex:inputField value="{!abastecimentoAtual.Quantidade__c}" 
+                                                                         styleClass="form-control" 
+                                                                         id="abQtd"
+                                                                         html-placeholder="Ex: 100"
+                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="{!abastecimentoAtual.Quantidade__c}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Custo Unitário (R$/L)</label>
+                                                        <apex:inputField value="{!abastecimentoAtual.Custo_Unitario__c}" 
+                                                                         styleClass="form-control" 
+                                                                         id="abCustoUnit"
+                                                                         html-placeholder="Ex: 10,00 ou 10.00"
+                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="{!abastecimentoAtual.Custo_Unitario__c}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
                                                 </div>
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Custo Unitário (R$/L)</label>
-                                                    <apex:inputField value="{!abastecimentoAtual.Custo_Unitario__c}" 
-                                                                     styleClass="form-control" 
-                                                                     id="abCustoUnit"
-                                                                     html-placeholder="Ex: 10,00 ou 10.00"
-                                                                     rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <apex:outputText value="{!abastecimentoAtual.Custo_Unitario__c}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
-                                                </div>
-                                            </div>
-                                            <div class="form-row">
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Custo Total (R$)</label>
-                                                    <apex:inputText value="{!abastecimentoAtual.Custo_Total__c}" 
-                                                                    styleClass="form-control readonly-field" 
-                                                                    id="abCustoTotal"
-                                                                    html-readonly="true"
-                                                                    rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <apex:outputText value="{!abastecimentoAtual.Custo_Total__c}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
-                                                </div>
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Média (L/h)</label>
-                                                    <apex:inputText styleClass="form-control readonly-field" 
-                                                                    id="abMedia"
-                                                                    html-readonly="true"
-                                                                    rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <apex:outputText value="-- calculado --" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
-                                                </div>
-                                            </div>
-                                            <div class="form-row">
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Tipo Combustível</label>
-                                                    <apex:inputField value="{!abastecimentoAtual.Tipo_Combustivel__c}" 
-                                                                     styleClass="form-control"
-                                                                     id="abTipoCombustivel"
-                                                                     html-placeholder="Ex: AVGAS, JET A, JET A-1, SAF"
-                                                                     rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <small class="form-hint" style="color:#6c757d; font-size:0.8em;" rendered="{!AND(camposHabilitados, !registroSalvo)}">Exemplo: AVGAS, JET A, JET A-1, SAF</small>
-                                                    <apex:outputText value="{!IF(abastecimentoAtual.Tipo_Combustivel__c != null, abastecimentoAtual.Tipo_Combustivel__c, '-- Não informado --')}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
-                                                </div>
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Local</label>
-                                                    <apex:inputField value="{!abastecimentoAtual.Local__c}" 
-                                                                     styleClass="form-control"
-                                                                     id="abLocal"
-                                                                     html-placeholder="Ex: SNAX"
-                                                                     rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <apex:outputText value="{!IF(abastecimentoAtual.Local__c != null, abastecimentoAtual.Local__c, '-- Não informado --')}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
-                                                </div>
-                                            </div>
-                                            <div class="form-row">
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Origem/Destino</label>
-                                                    <apex:inputField value="{!abastecimentoAtual.Origem_Destino__c}" 
-                                                                     styleClass="form-select"
-                                                                     rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    <apex:outputText value="{!IF(abastecimentoAtual.Origem_Destino__c != null, abastecimentoAtual.Origem_Destino__c, '-- Não informado --')}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
-                                                </div>
-                                            </div>
-                                            <div class="form-row">
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Documento de Referência</label>
-                                                    <!-- Trocado para inputTextarea para alinhar o texto/placeholder no topo -->
-                                                    <apex:inputTextarea value="{!abastecimentoAtual.Documento_Referencia__c}" 
-                                                                        styleClass="form-control"
-                                                                        style="resize: vertical; min-height: 70px;"
-                                                                        html-placeholder="Ex: NF 12345"
+                                                <div class="form-row">
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Custo Total (R$)</label>
+                                                        <apex:inputText value="{!abastecimentoAtual.Custo_Total__c}" 
+                                                                        styleClass="form-control readonly-field" 
+                                                                        id="abCustoTotal"
+                                                                        html-readonly="true"
                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    
-                                                    <apex:outputText value="{!IF(abastecimentoAtual.Documento_Referencia__c != null, abastecimentoAtual.Documento_Referencia__c, '-- Não informado --')}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                        <apex:outputText value="{!abastecimentoAtual.Custo_Total__c}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Média (L/h)</label>
+                                                        <apex:inputText styleClass="form-control readonly-field" 
+                                                                        id="abMedia"
+                                                                        html-readonly="true"
+                                                                        rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="-- calculado --" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
                                                 </div>
-                                                
-                                                <div class="form-group half-width">
-                                                    <label class="form-label">Observações de Abastecimento</label>
-                                                    <apex:inputField value="{!abastecimentoAtual.Observacoes__c}" 
-                                                                     styleClass="form-control"
-                                                                     style="resize: vertical; min-height: 70px;"
-                                                                     html-placeholder="Campo opcional — preencha apenas se necessário"
-                                                                     rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
-                                                    
-                                                    <apex:outputText value="{!IF(abastecimentoAtual.Observacoes__c != null, abastecimentoAtual.Observacoes__c, '-- Não informado --')}" 
-                                                                     styleClass="form-control readonly-field"
-                                                                     style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                <div class="form-row">
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Tipo Combustível</label>
+                                                        <apex:inputField value="{!abastecimentoAtual.Tipo_Combustivel__c}" 
+                                                                         styleClass="form-control"
+                                                                         id="abTipoCombustivel"
+                                                                         html-placeholder="Ex: AVGAS, JET A, JET A-1, SAF"
+                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <small class="form-hint" style="color:#6c757d; font-size:0.8em;" rendered="{!AND(camposHabilitados, !registroSalvo)}">Exemplo: AVGAS, JET A, JET A-1, SAF</small>
+                                                        <apex:outputText value="{!IF(abastecimentoAtual.Tipo_Combustivel__c != null, abastecimentoAtual.Tipo_Combustivel__c, '-- Não informado --')}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Local</label>
+                                                        <apex:inputField value="{!abastecimentoAtual.Local__c}" 
+                                                                         styleClass="form-control"
+                                                                         id="abLocal"
+                                                                         html-placeholder="Ex: SNAX"
+                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="{!IF(abastecimentoAtual.Local__c != null, abastecimentoAtual.Local__c, '-- Não informado --')}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                                <div class="form-row">
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Origem/Destino</label>
+                                                        <apex:inputField value="{!abastecimentoAtual.Origem_Destino__c}" 
+                                                                         styleClass="form-select"
+                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="{!IF(abastecimentoAtual.Origem_Destino__c != null, abastecimentoAtual.Origem_Destino__c, '-- Não informado --')}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Documento de Referência</label>
+                                                        <apex:inputTextarea value="{!abastecimentoAtual.Documento_Referencia__c}" 
+                                                                            styleClass="form-control"
+                                                                            style="resize: vertical; min-height: 70px;"
+                                                                            html-placeholder="Ex: NF 12345"
+                                                                            rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="{!IF(abastecimentoAtual.Documento_Referencia__c != null, abastecimentoAtual.Documento_Referencia__c, '-- Não informado --')}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
+                                                    <div class="form-group half-width">
+                                                        <label class="form-label">Observações de Abastecimento</label>
+                                                        <apex:inputField value="{!abastecimentoAtual.Observacoes__c}" 
+                                                                         styleClass="form-control"
+                                                                         style="resize: vertical; min-height: 70px;"
+                                                                         html-placeholder="Campo opcional — preencha apenas se necessário"
+                                                                         rendered="{!AND(camposHabilitados, !registroSalvo)}"/>
+                                                        <apex:outputText value="{!IF(abastecimentoAtual.Observacoes__c != null, abastecimentoAtual.Observacoes__c, '-- Não informado --')}" 
+                                                                         styleClass="form-control readonly-field"
+                                                                         style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"
+                                                                         rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    </div>
+                                                </div>
+                                            </apex:outputPanel>
+
                                         </div>
                                     </div>
                                     
