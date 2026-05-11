@@ -2844,7 +2844,7 @@
                                                                                         <apex:outputText value="{0, number, #,##0.0}L">
                                                                                             <apex:param value="{!ab.Quantidade__c}"/>
                                                                                         </apex:outputText>
-                                                                                        <apex:outputPanel rendered="{!ab.Custo_Total__c > 0}">
+                                                                                        <apex:outputPanel rendered="{!AND(ab.Custo_Total__c != null, ab.Custo_Total__c > 0)}">
                                                                                             <apex:outputText value=" • R$ {0, number, #,##0.00}">
                                                                                                 <apex:param value="{!ab.Custo_Total__c}"/>
                                                                                             </apex:outputText>
