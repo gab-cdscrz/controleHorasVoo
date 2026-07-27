@@ -87,7 +87,7 @@
             <targetReference>Buscar_Aeronaves_Ativas</targetReference>
         </connector>
     </assignments>
-    <description>Sincronização automática diária de voos do Planeit. Executa às 16h e busca dados dos últimos 2 dias. Processa todas as aeronaves em uma única transação.</description>
+    <description>Sincronização automática diária de voos do Planeit. Executa às 11h e busca dados dos últimos 7 dias. Processa todas as aeronaves em uma única transação.</description>
     <environments>Default</environments>
     <formulas>
         <name>fxDataFim</name>
@@ -97,7 +97,7 @@
     <formulas>
         <name>fxDataInicio</name>
         <dataType>Date</dataType>
-        <expression>TODAY() - 2</expression>
+        <expression>TODAY() - 7</expression>
     </formulas>
     <interviewLabel>Sincronização Diária Planeit {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Sincronização Diária Planeit</label>
@@ -173,8 +173,8 @@
             <dayOfMonthToRun>0</dayOfMonthToRun>
             <frequency>Daily</frequency>
             <frequencyNumber>0</frequencyNumber>
-            <startDate>2026-03-26</startDate>
-            <startTime>12:00:00.000Z</startTime>
+            <startDate>2026-05-11</startDate>
+            <startTime>11:00:00.000Z</startTime>
         </schedule>
         <triggerType>Scheduled</triggerType>
     </start>
