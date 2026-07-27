@@ -2749,11 +2749,12 @@
                                     <apex:outputPanel id="filtroPanel">
                                     <div class="calendario-filtros">
                                         <!-- Botão Sincronizar - Posição Absoluta no Canto Superior Direito -->
-                                        <apex:commandButton value="↻ Sincronizar" 
-                                                            action="{!sincronizarVoosPlaneit}" 
+                                        <apex:commandButton value="↻ Sincronizar"
+                                                            action="{!sincronizarVoosPlaneit}"
                                                             styleClass="btn-sincronizar-ghost"
                                                             reRender="mainForm"
                                                             status="loadingStatus"
+                                                            oncomplete="setTimeout(calcularInspecoesProximasCalendario, 500);"
                                                             title="Sincronizar voos do Planeit para o período selecionado"/>
                                         
                                         <div class="filtros-titulo">Registros de Voos</div>
@@ -2779,11 +2780,12 @@
                                             <div class="filtro-grupo filtro-acoes">
                                                 <label class="form-label" style="opacity: 0;">Ações</label>
                                                 <div class="acoes-calendario">
-                                                    <apex:commandButton value="Aplicar" 
-                                                                        action="{!aplicarFiltrosCalendario}" 
+                                                    <apex:commandButton value="Aplicar"
+                                                                        action="{!aplicarFiltrosCalendario}"
                                                                         styleClass="btn btn-primary"
                                                                         reRender="pageMessagesPanel,filtroPanel,calendarioPanel,manutencaoPanel"
-                                                                        status="loadingStatus"/>
+                                                                        status="loadingStatus"
+                                                                        oncomplete="setTimeout(calcularInspecoesProximasCalendario, 500);"/>
                                                 </div>
                                             </div>
                                         </div>
@@ -3974,13 +3976,13 @@
                                                         <p style="color: #6c757d; margin-bottom: 30px;">
                                                             Sincronize os dados de inspeções da aeronave <strong>{!aeronaveManutencao.Name}</strong> a partir da API Planeit.
                                                         </p>
-                                                        <apex:commandButton action="{!sincronizarControleTecnicoAeronave}" 
-                                                                            value="🔄 Sincronizar Inspeções do Planeit" 
-                                                                            styleClass="btn btn-primary" 
+                                                        <apex:commandButton action="{!sincronizarControleTecnicoAeronave}"
+                                                                            value="🔄 Sincronizar Inspeções do Planeit"
+                                                                            styleClass="btn btn-primary"
                                                                             style="font-size: 16px; padding: 12px 30px;"
                                                                             status="loadingStatus"
                                                                             reRender="mainForm"
-                                                                            oncomplete="setTimeout(calcularHorasRestantesInspecoes, 500);"/>
+                                                                            oncomplete="setTimeout(calcularHorasRestantesInspecoes, 500); setTimeout(calcularInspecoesProximasCalendario, 600);"/>
                                                     </div>
                                                 </div>
                                             </div>
@@ -4124,13 +4126,13 @@
                                                     
                                                     <!-- Botão de Sincronização -->
                                                     <div style="text-align: center; margin-top: 20px;">
-                                                        <apex:commandButton action="{!sincronizarControleTecnicoAeronave}" 
-                                                                            value="🔄 Atualizar Inspeções do Planeit" 
-                                                                            styleClass="btn btn-primary" 
+                                                        <apex:commandButton action="{!sincronizarControleTecnicoAeronave}"
+                                                                            value="🔄 Atualizar Inspeções do Planeit"
+                                                                            styleClass="btn btn-primary"
                                                                             style="font-size: 14px; padding: 10px 24px;"
                                                                             status="loadingStatus"
                                                                             reRender="mainForm"
-                                                                            oncomplete="setTimeout(calcularHorasRestantesInspecoes, 500);"/>
+                                                                            oncomplete="setTimeout(calcularHorasRestantesInspecoes, 500); setTimeout(calcularInspecoesProximasCalendario, 600);"/>
                                                     </div>
                                                     
                                                 </div>

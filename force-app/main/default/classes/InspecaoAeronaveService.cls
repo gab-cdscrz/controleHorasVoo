@@ -24,6 +24,7 @@ public without sharing class InspecaoAeronaveService {
     private static final String NAMED_CREDENTIAL = 'callout:Planeit_API';
     private static final String LOGIN_ENDPOINT = '/login';
     private static final String INSPECOES_ENDPOINT = '/aeronave/inspecoes';
+    private static final String EXECUCOES_ENDPOINT = '/aeronave/inspecao/execucoes';
     private static final String TOTAIS_ENDPOINT = '/aeronave/totais';
     private static final Integer TIMEOUT_MS = 120000;
     
@@ -76,27 +77,38 @@ public without sharing class InspecaoAeronaveService {
         public String situacaoInspecao; // 'A' = ativa, 'I' = inativa
         public String created_at;
         public String updated_at;
-        public List<DetalheExecucaoJSON> detalheUltimaExecucao;
     }
-    
+
     /**
-     * Detalhes da última execução de uma inspeção
+     * Response da API de Execucoes de Inspecao
+     * Endpoint: /aeronave/inspecao/execucoes?idAeronave={id}
+     * Retorna o HISTORICO de execucoes (varias por inspecao), ordenado da mais recente para a mais antiga.
      */
-    public class DetalheExecucaoJSON {
-        public Integer idExecucaoInspecao;
-        public Integer idInspecao;
+    public class ExecucoesResponse {
+        public Integer codigo;
+        public String mensagem;
+        public String metodo;
+        public List<ExecucaoJSON> data;
+    }
+
+    /**
+     * Dados de uma execucao realizada de inspecao.
+     * E daqui que vem a "Ultima execucao" e a "Proxima execucao" reais exibidas no Planeit.
+     */
+    public class ExecucaoJSON {
+        public String nomeInspecao;
         public Integer idAeronave;
+        public Integer idInspecao;
+        public Integer idExecucaoInspecao;
+        public String situacaoInspecao;
         public String dataExecucao;
         public String horasExecucao;
         public String dataProxima;
         public String horasProxima;
         public String responsavelExecucao;
         public String observacoes;
-        public String created_at;
-        public String updated_at;
-        public Integer rn;
     }
-    
+
     /**
      * Response da API de Totais
      */
@@ -250,27 +262,36 @@ public without sharing class InspecaoAeronaveService {
         
         // Map: Id Aeronave SF → Id Planeit
         Map<Id, Decimal> idPlaneitPorAeronave = new Map<Id, Decimal>();
-        
+
+        // Map: Id Aeronave SF → (Map: idInspecao → ULTIMA execucao real)
+        Map<Id, Map<Integer, ExecucaoJSON>> execucoesPorAeronave = new Map<Id, Map<Integer, ExecucaoJSON>>();
+
         for (Aeronave__c aero : aeronaves) {
             if (aero.Id_Planeit__c == null) {
                 continue;
             }
-            
+
             idPlaneitPorAeronave.put(aero.Id, aero.Id_Planeit__c);
-            
+
             try {
                 // Buscar inspeções
                 List<InspecaoJSON> inspecoes = buscarInspecoesAPI(token, aero.Id_Planeit__c);
                 if (inspecoes != null) {
                     inspecoesPorAeronave.put(aero.Id, inspecoes);
                 }
-                
+
+                // Buscar execucoes (historico) - fonte da ULTIMA e PROXIMA execucao reais
+                List<ExecucaoJSON> execucoes = buscarExecucoesAPI(token, aero.Id_Planeit__c);
+                if (execucoes != null) {
+                    execucoesPorAeronave.put(aero.Id, mapearUltimasExecucoes(execucoes));
+                }
+
                 // Buscar totais (horas totais de voo)
                 TotaisJSON totais = buscarTotaisAPI(token, aero.Id_Planeit__c);
                 if (totais != null && totais.horasVooEtapaDecimalTotal != null) {
                     horasTotaisPorAeronave.put(aero.Id, totais.horasVooEtapaDecimalTotal);
                 }
-                
+
             } catch (Exception e) {
                 System.debug(LoggingLevel.ERROR, 'Erro ao buscar dados aeronave ' + aero.Name + ': ' + e.getMessage());
             }
@@ -339,6 +360,12 @@ public without sharing class InspecaoAeronaveService {
             List<InspecaoJSON> inspecoes = inspecoesPorAeronave.get(aeronaveId);
             Decimal horasTotais = horasTotaisPorAeronave.get(aeronaveId);
             Decimal idPlaneit = idPlaneitPorAeronave.get(aeronaveId);
+
+            // Mapa das ultimas execucoes desta aeronave (idInspecao -> execucao mais recente)
+            Map<Integer, ExecucaoJSON> execucoesInspecao = execucoesPorAeronave.get(aeronaveId);
+            if (execucoesInspecao == null) {
+                execucoesInspecao = new Map<Integer, ExecucaoJSON>();
+            }
             
             // Verificar se TBO existe na lista de inspeções ativas
             Boolean tboEncontrada = false;
@@ -412,52 +439,46 @@ public without sharing class InspecaoAeronaveService {
                     }
                 }
                 
-                // Processar detalheUltimaExecucao (pegar primeiro item)
-                if (inspJSON.detalheUltimaExecucao != null && !inspJSON.detalheUltimaExecucao.isEmpty()) {
-                    DetalheExecucaoJSON exec = inspJSON.detalheUltimaExecucao[0];
-                    
+                // Buscar a ULTIMA execucao real desta inspecao (endpoint /aeronave/inspecao/execucoes).
+                // E daqui que vem a "Proxima execucao" que o Planeit exibe = ultima execucao + intervalo.
+                ExecucaoJSON ultimaExec = (inspJSON.idInspecao != null)
+                    ? execucoesInspecao.get(inspJSON.idInspecao)
+                    : null;
+
+                if (ultimaExec != null) {
                     // Data de Execução
-                    if (String.isNotBlank(exec.dataExecucao)) {
-                        try {
-                            registro.Data_Execucao__c = Date.valueOf(exec.dataExecucao.substring(0, 10));
-                        } catch (Exception e) {
-                            System.debug(LoggingLevel.WARN, 'Erro ao converter dataExecucao: ' + exec.dataExecucao);
-                        }
-                    }
-                    
+                    registro.Data_Execucao__c = converterDataPlaneit(ultimaExec.dataExecucao);
+
                     // Horas de Execução
-                    if (String.isNotBlank(exec.horasExecucao)) {
+                    if (String.isNotBlank(ultimaExec.horasExecucao)) {
                         try {
-                            registro.Horas_Execucao__c = Decimal.valueOf(exec.horasExecucao);
+                            registro.Horas_Execucao__c = Decimal.valueOf(ultimaExec.horasExecucao);
                         } catch (Exception e) {
-                            System.debug(LoggingLevel.WARN, 'Erro ao converter horasExecucao: ' + exec.horasExecucao);
+                            System.debug(LoggingLevel.WARN, 'Erro ao converter horasExecucao: ' + ultimaExec.horasExecucao);
                         }
                     }
-                    
+
                     // Data Próxima (importante para CVA)
-                    if (String.isNotBlank(exec.dataProxima)) {
+                    registro.Data_Proxima__c = converterDataPlaneit(ultimaExec.dataProxima);
+
+                    // Horas Próxima - da última execução real
+                    if (String.isNotBlank(ultimaExec.horasProxima)) {
                         try {
-                            registro.Data_Proxima__c = Date.valueOf(exec.dataProxima.substring(0, 10));
+                            registro.Horas_Proxima__c = Decimal.valueOf(ultimaExec.horasProxima);
                         } catch (Exception e) {
-                            System.debug(LoggingLevel.WARN, 'Erro ao converter dataProxima: ' + exec.dataProxima);
+                            System.debug(LoggingLevel.WARN, 'Erro ao converter horasProxima: ' + ultimaExec.horasProxima);
                         }
                     }
-                    
-                    // Horas Próxima - da última execução
-                    if (String.isNotBlank(exec.horasProxima)) {
-                        try {
-                            registro.Horas_Proxima__c = Decimal.valueOf(exec.horasProxima);
-                        } catch (Exception e) {
-                            System.debug(LoggingLevel.WARN, 'Erro ao converter horasProxima: ' + exec.horasProxima);
-                        }
-                    }
-                    
+
                     // Responsável pela Execução
-                    registro.Responsavel_Execucao__c = exec.responsavelExecucao;
+                    registro.Responsavel_Execucao__c = ultimaExec.responsavelExecucao;
                 }
-                
-                // FALLBACK: Se não temos Horas_Proxima__c da execução, usar inicioHoras
-                // Isso é importante para inspeções como TBO que não têm execução prévia
+
+                // FALLBACK para inspecoes NUNCA executadas (ex: TBO, ou recem-cadastradas).
+                // So entra quando nao ha execucao real; usa a configuracao inicial do programa.
+                if (registro.Data_Proxima__c == null && String.isNotBlank(inspJSON.inicioTempo)) {
+                    registro.Data_Proxima__c = converterDataPlaneit(inspJSON.inicioTempo);
+                }
                 if (registro.Horas_Proxima__c == null && String.isNotBlank(inspJSON.inicioHoras)) {
                     try {
                         registro.Horas_Proxima__c = Decimal.valueOf(inspJSON.inicioHoras);
@@ -624,13 +645,96 @@ public without sharing class InspecaoAeronaveService {
             
             System.debug(LoggingLevel.ERROR, 'Erro buscar inspeções: HTTP ' + res.getStatusCode());
             return null;
-            
+
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Exceção buscar inspeções: ' + e.getMessage());
             return null;
         }
     }
-    
+
+    /**
+     * @description Busca o historico de execucoes de inspecao de uma aeronave via API.
+     *              Endpoint: /aeronave/inspecao/execucoes?idAeronave={id}
+     * @param token Token Bearer
+     * @param idAeronavePlaneit ID da aeronave no Planeit
+     * @return Lista de ExecucaoJSON (historico completo) ou null
+     */
+    private static List<ExecucaoJSON> buscarExecucoesAPI(String token, Decimal idAeronavePlaneit) {
+        try {
+            String endpoint = NAMED_CREDENTIAL + EXECUCOES_ENDPOINT +
+                '?idAeronave=' + String.valueOf(idAeronavePlaneit.intValue());
+
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint(endpoint);
+            req.setMethod('GET');
+            req.setHeader('Authorization', 'Bearer ' + token);
+            req.setHeader('Accept', 'application/json');
+            req.setHeader('Content-Type', 'application/json');
+            req.setTimeout(TIMEOUT_MS);
+
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+
+            if (res.getStatusCode() == 200) {
+                ExecucoesResponse execRes = (ExecucoesResponse) JSON.deserialize(
+                    res.getBody(),
+                    ExecucoesResponse.class
+                );
+
+                if (execRes.codigo == 200 && execRes.data != null) {
+                    System.debug('✅ Execucoes encontradas: ' + execRes.data.size() +
+                        ' para aeronave ' + idAeronavePlaneit);
+                    return execRes.data;
+                }
+            }
+
+            System.debug(LoggingLevel.ERROR, 'Erro buscar execucoes: HTTP ' + res.getStatusCode());
+            return null;
+
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Exceção buscar execucoes: ' + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * @description Reduz o historico de execucoes a apenas a ULTIMA execucao de cada inspecao.
+     *              A API retorna varias execucoes por inspecao (ordenadas da mais recente para a mais antiga);
+     *              mantemos a de maior dataExecucao. Em empate de data, mantemos a primeira encontrada
+     *              (que e a que o Planeit considera vigente).
+     * @param execucoes Lista completa de execucoes
+     * @return Map idInspecao -> ultima ExecucaoJSON
+     */
+    private static Map<Integer, ExecucaoJSON> mapearUltimasExecucoes(List<ExecucaoJSON> execucoes) {
+        Map<Integer, ExecucaoJSON> resultado = new Map<Integer, ExecucaoJSON>();
+        if (execucoes == null) {
+            return resultado;
+        }
+
+        for (ExecucaoJSON exec : execucoes) {
+            if (exec.idInspecao == null) {
+                continue;
+            }
+
+            ExecucaoJSON existente = resultado.get(exec.idInspecao);
+            if (existente == null) {
+                resultado.put(exec.idInspecao, exec);
+                continue;
+            }
+
+            Date dataNova = converterDataPlaneit(exec.dataExecucao);
+            Date dataExistente = converterDataPlaneit(existente.dataExecucao);
+
+            // Substitui apenas se a nova execucao tem data estritamente mais recente.
+            // Empate mantem a primeira (a API ja entrega a vigente primeiro).
+            if (dataNova != null && (dataExistente == null || dataNova > dataExistente)) {
+                resultado.put(exec.idInspecao, exec);
+            }
+        }
+
+        return resultado;
+    }
+
     /**
      * @description Busca totais de uma aeronave via API
      * @param token Token Bearer
@@ -676,8 +780,27 @@ public without sharing class InspecaoAeronaveService {
     // =========================================================================
     
     /**
-     * @description Calcula o status da inspeção baseado nas horas/datas
-     * @param registro Registro de inspeção
+     * @description Converte datas retornadas pelo Planeit.
+     * @param dataTexto Data no formato yyyy-MM-dd ou yyyy-MM-dd HH:mm:ss
+     * @return Data convertida ou null quando invalida
+     */
+    private static Date converterDataPlaneit(String dataTexto) {
+        if (String.isBlank(dataTexto)) {
+            return null;
+        }
+
+        try {
+            String dataNormalizada = dataTexto.length() >= 10 ? dataTexto.substring(0, 10) : dataTexto;
+            return Date.valueOf(dataNormalizada);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, 'Erro ao converter data Planeit: ' + dataTexto);
+            return null;
+        }
+    }
+
+    /**
+     * @description Calcula o status da inspecao baseado nas horas/datas
+     * @param registro Registro de inspecao
      * @param horasTotais Horas totais da aeronave
      * @return Status calculado
      */

@@ -40,6 +40,40 @@ private class InspecaoAeronaveServiceTest {
                 res.setBody('{"codigo":200,"mensagem":"OK","data":{"access_token":"mock_token","token_type":"Bearer"}}');
                 res.setStatusCode(200);
             }
+            // Mock de execucoes (historico) - fonte da ultima/proxima execucao reais
+            else if (endpoint.contains('execucoes')) {
+                String execResponse = '{' +
+                    '"codigo": 200,' +
+                    '"mensagem": "OK",' +
+                    '"metodo": "GET",' +
+                    '"data": [' +
+                        '{' +
+                            '"nomeInspecao": "100hrs",' +
+                            '"idAeronave": 1599,' +
+                            '"idInspecao": 3057,' +
+                            '"situacaoInspecao": "A",' +
+                            '"dataExecucao": "2025-12-30",' +
+                            '"horasExecucao": "2400",' +
+                            '"dataProxima": null,' +
+                            '"horasProxima": "2500",' +
+                            '"responsavelExecucao": "FLIGHT CORNÉNIO"' +
+                        '},' +
+                        '{' +
+                            '"nomeInspecao": "CVA",' +
+                            '"idAeronave": 1599,' +
+                            '"idInspecao": 3058,' +
+                            '"situacaoInspecao": "A",' +
+                            '"dataExecucao": "2025-05-22",' +
+                            '"horasExecucao": null,' +
+                            '"dataProxima": "2026-05-22",' +
+                            '"horasProxima": null,' +
+                            '"responsavelExecucao": "ANAC"' +
+                        '}' +
+                    ']' +
+                '}';
+                res.setBody(execResponse);
+                res.setStatusCode(200);
+            }
             // Mock de inspeções
             else if (endpoint.contains('inspecoes')) {
                 String jsonResponse = '{' +
@@ -52,37 +86,20 @@ private class InspecaoAeronaveServiceTest {
                             '"idAeronave": 1599,' +
                             '"nomeInspecao": "100hrs",' +
                             '"inicioHoras": "2500",' +
-                            '"situacaoInspecao": "A",' +
-                            '"detalheUltimaExecucao": [{' +
-                                '"idExecucaoInspecao": 1,' +
-                                '"dataExecucao": "2025-12-30",' +
-                                '"horasExecucao": "2400",' +
-                                '"dataProxima": "2026-03-07",' +
-                                '"horasProxima": "2500",' +
-                                '"responsavelExecucao": "FLIGHT CORNÉNIO"' +
-                            '}]' +
+                            '"situacaoInspecao": "A"' +
                         '},' +
                         '{' +
                             '"idInspecao": 3058,' +
                             '"idAeronave": 1599,' +
                             '"nomeInspecao": "CVA",' +
-                            '"situacaoInspecao": "A",' +
-                            '"detalheUltimaExecucao": [{' +
-                                '"dataExecucao": "2025-05-22",' +
-                                '"dataProxima": "2026-05-22",' +
-                                '"responsavelExecucao": "ANAC"' +
-                            '}]' +
+                            '"situacaoInspecao": "A"' +
                         '},' +
                         '{' +
                             '"idInspecao": 3059,' +
                             '"idAeronave": 1599,' +
                             '"nomeInspecao": "200hrs",' +
                             '"inicioHoras": "2600",' +
-                            '"situacaoInspecao": "A",' +
-                            '"detalheUltimaExecucao": [{' +
-                                '"horasProxima": "2600",' +
-                                '"responsavelExecucao": "FLIGHT CORNÉNIO"' +
-                            '}]' +
+                            '"situacaoInspecao": "A"' +
                         '}' +
                     ']' +
                 '}';
@@ -117,6 +134,10 @@ private class InspecaoAeronaveServiceTest {
                 res.setBody('{"codigo":200,"mensagem":"OK","data":{"access_token":"mock_token","token_type":"Bearer"}}');
                 res.setStatusCode(200);
             }
+            else if (endpoint.contains('execucoes')) {
+                res.setBody('{"codigo":200,"mensagem":"OK","metodo":"GET","data":[]}');
+                res.setStatusCode(200);
+            }
             else if (endpoint.contains('inspecoes')) {
                 // Retorna inspeções SEM TBO (TBO vencida)
                 String jsonResponse = '{' +
@@ -128,8 +149,7 @@ private class InspecaoAeronaveServiceTest {
                             '"idAeronave": 1599,' +
                             '"nomeInspecao": "50hrs",' +
                             '"inicioHoras": "2550",' +
-                            '"situacaoInspecao": "A",' +
-                            '"detalheUltimaExecucao": []' +
+                            '"situacaoInspecao": "A"' +
                         '}' +
                     ']' +
                 '}';
@@ -162,6 +182,10 @@ private class InspecaoAeronaveServiceTest {
                 res.setBody('{"codigo":200,"mensagem":"OK","data":{"access_token":"mock_token","token_type":"Bearer"}}');
                 res.setStatusCode(200);
             }
+            else if (endpoint.contains('execucoes')) {
+                res.setBody('{"codigo":200,"mensagem":"OK","metodo":"GET","data":[]}');
+                res.setStatusCode(200);
+            }
             else if (endpoint.contains('inspecoes')) {
                 // Retorna inspeção INATIVA (situacaoInspecao = 'I')
                 String jsonResponse = '{' +
@@ -172,18 +196,14 @@ private class InspecaoAeronaveServiceTest {
                             '"idInspecao": 9999,' +
                             '"idAeronave": 1599,' +
                             '"nomeInspecao": "ANTIGA",' +
-                            '"situacaoInspecao": "I",' +
-                            '"detalheUltimaExecucao": []' +
+                            '"situacaoInspecao": "I"' +
                         '},' +
                         '{' +
                             '"idInspecao": 3061,' +
                             '"idAeronave": 1599,' +
                             '"nomeInspecao": "TBO",' +
                             '"inicioHoras": "3000",' +
-                            '"situacaoInspecao": "A",' +
-                            '"detalheUltimaExecucao": [{' +
-                                '"horasProxima": "3000"' +
-                            '}]' +
+                            '"situacaoInspecao": "A"' +
                         '}' +
                     ']' +
                 '}';
@@ -203,7 +223,62 @@ private class InspecaoAeronaveServiceTest {
     }
     
     /**
-     * @description Testa sincronização bem-sucedida de inspeções
+     * @description Mock para CVA sem execução prévia usando inicioTempo
+     */
+    private class CVAInicioTempoMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            
+            String endpoint = req.getEndpoint();
+            
+            if (endpoint.contains('login')) {
+                res.setBody('{"codigo":200,"mensagem":"OK","data":{"access_token":"mock_token","token_type":"Bearer"}}');
+                res.setStatusCode(200);
+            }
+            else if (endpoint.contains('execucoes')) {
+                res.setBody('{"codigo":200,"mensagem":"OK","metodo":"GET","data":[]}');
+                res.setStatusCode(200);
+            }
+            else if (endpoint.contains('inspecoes')) {
+                String jsonResponse = '{' +
+                    '"codigo": 200,' +
+                    '"mensagem": "OK",' +
+                    '"data": [' +
+                        '{' +
+                            '"idInspecao": 3061,' +
+                            '"idAeronave": 1599,' +
+                            '"nomeInspecao": "TBO",' +
+                            '"inicioHoras": "3000",' +
+                            '"situacaoInspecao": "A"' +
+                        '},' +
+                        '{' +
+                            '"idInspecao": 3062,' +
+                            '"idAeronave": 1599,' +
+                            '"nomeInspecao": "CVA",' +
+                            '"inicioTempo": "2026-05-22",' +
+                            '"repeticaoTempo": 365,' +
+                            '"situacaoInspecao": "A"' +
+                        '}' +
+                    ']' +
+                '}';
+                res.setBody(jsonResponse);
+                res.setStatusCode(200);
+            }
+            else if (endpoint.contains('totais')) {
+                res.setBody('{"codigo":200,"mensagem":"OK","data":{"horasVooEtapaDecimalTotal":2500}}');
+                res.setStatusCode(200);
+            }
+            else {
+                res.setStatusCode(404);
+            }
+            
+            return res;
+        }
+    }
+    
+    /**
+     * @description Testa sincronizacao bem-sucedida de inspecoes
      */
     @isTest
     static void testSincronizarInspecoesAeronave() {
@@ -329,7 +404,35 @@ private class InspecaoAeronaveServiceTest {
     }
     
     /**
-     * @description Testa aeronave não encontrada
+     * @description Testa CVA sem detalhe de execucao usando inicioTempo como proxima data
+     */
+    @isTest
+    static void testCVAUsaInicioTempoQuandoSemExecucao() {
+        Aeronave__c aeronave = [SELECT Id FROM Aeronave__c LIMIT 1];
+        
+        Test.setMock(HttpCalloutMock.class, new CVAInicioTempoMock());
+        
+        Test.startTest();
+        InspecaoAeronaveService.ResultadoSincronizacao resultado = 
+            InspecaoAeronaveService.sincronizarInspecoesAeronave(aeronave.Id);
+        Test.stopTest();
+        
+        System.assertEquals(true, resultado.sucesso, 'Sincronizacao deveria ter sucesso');
+        
+        Inspecao_Aeronave__c cva = [
+            SELECT Data_Proxima__c, Status_Inspecao__c
+            FROM Inspecao_Aeronave__c
+            WHERE Aeronave__c = :aeronave.Id
+            AND Nome_Inspecao__c = 'CVA'
+            LIMIT 1
+        ];
+        
+        System.assertEquals(Date.newInstance(2026, 5, 22), cva.Data_Proxima__c, 'CVA deve usar inicioTempo como Data Proxima');
+        System.assertEquals('VENCIDA', cva.Status_Inspecao__c, 'CVA deve ser calculada por data quando inicioTempo esta vencido');
+    }
+    
+    /**
+     * @description Testa aeronave nao encontrada
      */
     @isTest
     static void testAeronaveNaoEncontrada() {
@@ -412,30 +515,61 @@ private class InspecaoAeronaveServiceTest {
                     '"idAeronave": 1599,' +
                     '"nomeInspecao": "100hrs",' +
                     '"inicioHoras": "2500",' +
-                    '"situacaoInspecao": "A",' +
-                    '"detalheUltimaExecucao": [{' +
-                        '"idExecucaoInspecao": 1,' +
-                        '"dataExecucao": "2025-12-30",' +
-                        '"horasExecucao": "2400",' +
-                        '"dataProxima": "2026-03-07",' +
-                        '"horasProxima": "2500",' +
-                        '"responsavelExecucao": "FLIGHT CORNÉNIO"' +
-                    '}]' +
+                    '"situacaoInspecao": "A"' +
                 '}' +
             ']' +
         '}';
-        
+
         Test.startTest();
-        InspecaoAeronaveService.InspecoesResponse response = 
+        InspecaoAeronaveService.InspecoesResponse response =
             (InspecaoAeronaveService.InspecoesResponse) JSON.deserialize(
-                jsonResponse, 
+                jsonResponse,
                 InspecaoAeronaveService.InspecoesResponse.class
             );
         Test.stopTest();
-        
+
         System.assertEquals(200, response.codigo, 'Código deveria ser 200');
         System.assertEquals(1, response.data.size(), 'Deveria ter 1 inspeção');
         System.assertEquals('100hrs', response.data[0].nomeInspecao, 'Nome deveria ser 100hrs');
+    }
+
+    /**
+     * @description Testa deserialização do JSON do endpoint de execuções (fonte da última/próxima execução)
+     */
+    @isTest
+    static void testDeserializeExecucaoJSON() {
+        String jsonResponse = '{' +
+            '"codigo": 200,' +
+            '"mensagem": "Sucesso",' +
+            '"metodo": "GET",' +
+            '"data": [' +
+                '{' +
+                    '"nomeInspecao": "100hrs",' +
+                    '"idAeronave": 1599,' +
+                    '"idInspecao": 3056,' +
+                    '"idExecucaoInspecao": 8694,' +
+                    '"situacaoInspecao": "A",' +
+                    '"dataExecucao": "2026-01-22",' +
+                    '"horasExecucao": "2801.6",' +
+                    '"dataProxima": null,' +
+                    '"horasProxima": "2898.6",' +
+                    '"responsavelExecucao": "FLIGHT CORNÉNIO"' +
+                '}' +
+            ']' +
+        '}';
+
+        Test.startTest();
+        InspecaoAeronaveService.ExecucoesResponse response =
+            (InspecaoAeronaveService.ExecucoesResponse) JSON.deserialize(
+                jsonResponse,
+                InspecaoAeronaveService.ExecucoesResponse.class
+            );
+        Test.stopTest();
+
+        System.assertEquals(200, response.codigo, 'Código deveria ser 200');
+        System.assertEquals(1, response.data.size(), 'Deveria ter 1 execução');
+        System.assertEquals(3056, response.data[0].idInspecao, 'idInspecao deveria ser 3056');
+        System.assertEquals('2898.6', response.data[0].horasProxima, 'horasProxima deveria ser 2898.6');
     }
     
     /**

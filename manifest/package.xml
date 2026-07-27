@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Pacote de deploy: correcao da sincronizacao de inspecoes (ultima/proxima execucao real)
+    + remocao de codigo morto (buscarInspecoes/InspecaoData/DetalheExecucaoData).
+    Apenas classes Apex foram alteradas - nenhum objeto/campo novo.
+-->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>InspecaoAeronaveService</members>
+        <members>InspecaoAeronaveServiceTest</members>
+        <members>PlaneitAPIService</members>
+        <members>PlaneitAPIServiceTest</members>
+        <name>ApexClass</name>
+    </types>
+    <version>67.0</version>
+</Package>

@@ -393,7 +393,7 @@ public without sharing class ControleHorasVooController {
             Decimal horasVooAtual = controleHoras.Horas_Voo__c ?? 0;
             
             // Capturar o ID do usuário logado do sistema de sessão customizado e buscar o Empregado__c
-            String loginUsuario = (String)Session.getValue('idLogin');
+            String loginUsuario = Session.getLoginId();
             
             if (String.isNotBlank(loginUsuario)) {
                 List<Empregado__c> empregados = [

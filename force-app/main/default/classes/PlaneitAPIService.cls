@@ -26,7 +26,6 @@ public without sharing class PlaneitAPIService {
     private static final String NAMED_CREDENTIAL = 'callout:Planeit_API';
     private static final String LOGIN_ENDPOINT = '/login';
     private static final String VOOS_ENDPOINT = '/aeronave/voos';
-    private static final String INSPECOES_ENDPOINT = '/aeronave/inspecoes';
     private static final String TOTAIS_ENDPOINT = '/aeronave/totais';
     private static final Integer TIMEOUT_SEGUNDOS = 120;
     private static final Integer MAX_CALLOUTS = 90; // Margem de segurança (limite: 100)
@@ -123,54 +122,6 @@ public without sharing class PlaneitAPIService {
         public String codigoMoeda;
         public String documentoReferencia; // Vai para campo Notas
         public String observacoes;
-    }
-    
-    /**
-     * Response da API de Inspeções
-     */
-    private class InspecoesResponse {
-        public Integer codigo;
-        public String mensagem;
-        public String metodo;
-        public List<InspecaoData> data;
-    }
-    
-    /**
-     * Dados de uma inspeção
-     */
-    public class InspecaoData {
-        public Integer idInspecao;
-        public String nomeInspecao;
-        public Integer idAeronave;
-        public String flagCVA;
-        public String inicioHoras;
-        public String repeticaoHoras;
-        public String toleranciaHoras;
-        public String inicioTempo;
-        public Integer repeticaoTempo;
-        public String toleranciaTempo;
-        public String situacaoInspecao;
-        public String created_at;
-        public String updated_at;
-        public List<DetalheExecucaoData> detalheUltimaExecucao;
-    }
-    
-    /**
-     * Detalhes da última execução de uma inspeção
-     */
-    public class DetalheExecucaoData {
-        public Integer idExecucaoInspecao;
-        public Integer idInspecao;
-        public Integer idAeronave;
-        public String dataExecucao;
-        public String horasExecucao;
-        public String dataProxima;
-        public String horasProxima;
-        public String responsavelExecucao;
-        public String observacoes;
-        public String created_at;
-        public String updated_at;
-        public Integer rn;
     }
     
     /**
@@ -279,6 +230,7 @@ public without sharing class PlaneitAPIService {
         label='Sincronizar Voos do Planeit' 
         description='Busca voos e cria/atualiza registros Controle_Horas_Voo__c automaticamente'
         category='Integração Planeit'
+        callout=true
     )
     public static List<SincronizarVoosResponse> sincronizarVoosDoPlaneit(List<SincronizarVoosLoteRequest> loteRequests) {
         List<SincronizarVoosResponse> respostas = new List<SincronizarVoosResponse>();
@@ -1007,55 +959,9 @@ public without sharing class PlaneitAPIService {
     }
     
     // =========================================================================
-    // MÉTODOS PARA INSPEÇÕES E CONTROLE TÉCNICO
+    // MÉTODOS PARA CONTROLE TÉCNICO
     // =========================================================================
-    
-    /**
-     * @description Busca inspeções da aeronave na API Planeit
-     * @param idAeronavePlaneit ID da aeronave no Planeit
-     * @return Lista de inspeções ou null se erro
-     */
-    public static List<InspecaoData> buscarInspecoes(Decimal idAeronavePlaneit) {
-        String token = obterToken();
-        if (String.isBlank(token)) {
-            System.debug(LoggingLevel.ERROR, 'Token não disponível para buscar inspeções');
-            return null;
-        }
-        
-        try {
-            String endpoint = NAMED_CREDENTIAL + INSPECOES_ENDPOINT + '?idAeronave=' + 
-                String.valueOf(idAeronavePlaneit.intValue());
-            
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint(endpoint);
-            req.setMethod('GET');
-            req.setHeader('Authorization', 'Bearer ' + token);
-            req.setHeader('Content-Type', 'application/json');
-            req.setTimeout(TIMEOUT_SEGUNDOS * 1000);
-            
-            Http http = new Http();
-            HttpResponse res = http.send(req);
-            
-            if (res.getStatusCode() == 200) {
-                InspecoesResponse inspecoesRes = (InspecoesResponse) JSON.deserialize(
-                    res.getBody(), 
-                    InspecoesResponse.class
-                );
-                
-                if (inspecoesRes.codigo == 200 && inspecoesRes.data != null) {
-                    return inspecoesRes.data;
-                }
-            }
-            
-            System.debug(LoggingLevel.ERROR, 'Erro ao buscar inspeções: ' + res.getStatusCode() + ' - ' + res.getBody());
-            return null;
-            
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR, 'Exceção ao buscar inspeções: ' + e.getMessage() + '\n' + e.getStackTraceString());
-            return null;
-        }
-    }
-    
+
     /**
      * @description Busca totais da aeronave na API Planeit
      * @param idAeronavePlaneit ID da aeronave no Planeit
