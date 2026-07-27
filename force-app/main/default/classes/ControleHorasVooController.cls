@@ -85,7 +85,28 @@ public without sharing class ControleHorasVooController {
         get { return '-- Selecione a aeronave primeiro --'; }
         set;
     }
-    
+
+    // =============================================================================
+    // PROPRIEDADES PARA A ABA DE CADASTRO DE AERONAVES (FROTA PRÓPRIA/LOCADA)
+    // =============================================================================
+    public List<Aeronave__c> listaAeronaves { get; set; }
+    public String filtroTipoFrotaAeronaves { get; set; }  // '', 'Propria', 'Locada'
+    public String filtroStatusAeronaves { get; set; }     // '', 'ativas', 'inativas'
+
+    public Aeronave__c aeronaveForm { get; set; }
+    public Id aeronaveFormOriginalId { get; set; }         // backup do Id (padrão idBackup)
+    public Boolean modoEdicaoAeronave { get; set; }
+
+    public String tituloFormularioAeronave {
+        get {
+            if (aeronaveFormOriginalId != null) {
+                return '✏️ Editando Aeronave' + (String.isNotBlank(aeronaveForm.Name) ? ' - ' + aeronaveForm.Name : '');
+            }
+            return '✈️ Nova Aeronave';
+        }
+        set;
+    }
+
     // Propriedades para calendário
     public String filtroAeronaveIdCalendario { get; set; }
     public String filtroAnoCalendario { get; set; }
@@ -178,6 +199,14 @@ public without sharing class ControleHorasVooController {
         inspecoesAeronave = new List<Inspecao_Aeronave__c>();
         controleHoras.Data_do_Voo__c = Date.today();
         abaAtiva = 'controles';
+
+        // Inicializar aba de cadastro de aeronaves
+        listaAeronaves = new List<Aeronave__c>();
+        filtroTipoFrotaAeronaves = '';
+        filtroStatusAeronaves = '';
+        aeronaveForm = new Aeronave__c(Tipo_Frota__c = 'Locada', Ativo__c = true);
+        aeronaveFormOriginalId = null;
+        modoEdicaoAeronave = false;
         registroSalvo = false;
         somenteAbastecimento = false;
         
@@ -646,6 +675,8 @@ public without sharing class ControleHorasVooController {
             if (String.isNotBlank(aeronaveIdManutencao)) {
                 selecionarAeronaveManutencao();
             }
+        } else if (abaAtiva == 'aeronaves') {
+            carregarListaAeronaves();
         }
     }
     
@@ -1367,5 +1398,156 @@ public without sharing class ControleHorasVooController {
         } catch (Exception e) {
             inspecoesProximasCalendario = new List<Inspecao_Aeronave__c>();
         }
+    }
+
+    // =============================================================================
+    // MÉTODOS PARA CADASTRO DE AERONAVES (FROTA PRÓPRIA / LOCADA)
+    // =============================================================================
+
+    /**
+     * @description Carrega a lista de aeronaves da aba "Aeronaves", aplicando os
+     * filtros de tipo de frota e status atualmente selecionados.
+     */
+    private void carregarListaAeronaves() {
+        try {
+            String query = 'SELECT Id, Name, Modelo__c, Fabricante__c, Ano_de_Fabricacao__c, ' +
+                'Tipo_Frota__c, Empresa_Locadora__c, Ativo__c, Horas_Totais_de_Voo__c, ' +
+                'Id_Planeit__c, Consumo__c, Consumo_translado__c, ' +
+                'Velocidade_media__c, Velocidade_media_translado__c ' +
+                'FROM Aeronave__c';
+
+            List<String> condicoes = new List<String>();
+            if (filtroTipoFrotaAeronaves == 'Propria' || filtroTipoFrotaAeronaves == 'Locada') {
+                condicoes.add('Tipo_Frota__c = \'' + String.escapeSingleQuotes(filtroTipoFrotaAeronaves) + '\'');
+            }
+            if (filtroStatusAeronaves == 'ativas') {
+                condicoes.add('Ativo__c = true');
+            } else if (filtroStatusAeronaves == 'inativas') {
+                condicoes.add('Ativo__c = false');
+            }
+            if (!condicoes.isEmpty()) {
+                query += ' WHERE ' + String.join(condicoes, ' AND ');
+            }
+            query += ' ORDER BY Name LIMIT 500';
+
+            listaAeronaves = Database.query(query);
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao carregar aeronaves: ' + e.getMessage()));
+            listaAeronaves = new List<Aeronave__c>();
+        }
+    }
+
+    /**
+     * @description Action do botão "Aplicar" dos filtros da aba Aeronaves.
+     */
+    public void aplicarFiltrosAeronaves() {
+        carregarListaAeronaves();
+    }
+
+    /**
+     * @description Abre o formulário para cadastrar uma nova aeronave.
+     * Default "Locada", já que é o caso de uso principal desta aba —
+     * cadastro de frota própria segue raro/feito via Setup.
+     */
+    public void novaAeronave() {
+        aeronaveForm = new Aeronave__c(Tipo_Frota__c = 'Locada', Ativo__c = true);
+        aeronaveFormOriginalId = null;
+        modoEdicaoAeronave = true;
+    }
+
+    /**
+     * @description Carrega uma aeronave existente para edição, seguindo o
+     * padrão idBackup (nunca delete+insert).
+     */
+    public void editarAeronave() {
+        String aeronaveIdParam = ApexPages.currentPage().getParameters().get('aeronaveId');
+        if (String.isBlank(aeronaveIdParam)) return;
+
+        try {
+            Aeronave__c registro = [
+                SELECT Id, Name, Modelo__c, Fabricante__c, Ano_de_Fabricacao__c,
+                       Tipo_Frota__c, Empresa_Locadora__c, Ativo__c,
+                       Consumo__c, Consumo_translado__c,
+                       Velocidade_media__c, Velocidade_media_translado__c
+                FROM Aeronave__c
+                WHERE Id = :aeronaveIdParam
+                LIMIT 1
+            ];
+
+            aeronaveFormOriginalId = registro.Id;
+            registro.Id = null;
+            aeronaveForm = registro;
+            modoEdicaoAeronave = true;
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao carregar aeronave: ' + e.getMessage()));
+        }
+    }
+
+    /**
+     * @description Salva a aeronave em edição (nova ou existente), seguindo o
+     * padrão idBackup. Invalida o cache de aeronaveOptions ao final para que
+     * os pickers de aeronave (calendário, novo voo, manutenção) reflitam a
+     * mudança na mesma sessão.
+     */
+    public void salvarAeronave() {
+        if (String.isBlank(aeronaveForm.Name)) {
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'O campo Matrícula é obrigatório.'));
+            return;
+        }
+
+        try {
+            // Aeronaves cadastradas por esta aba nunca devem ter Id_Planeit__c —
+            // garante que fiquem fora da sincronização automática do Planeit
+            aeronaveForm.Id_Planeit__c = null;
+
+            if (aeronaveFormOriginalId != null) {
+                aeronaveForm.Id = aeronaveFormOriginalId;
+                update aeronaveForm;
+                ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.CONFIRM, '✓ Aeronave atualizada com sucesso!'));
+            } else {
+                insert aeronaveForm;
+                ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.CONFIRM, '✓ Aeronave cadastrada com sucesso!'));
+            }
+
+            aeronaveOptionsPrivate = null; // invalida cache dos pickers de aeronave
+
+            modoEdicaoAeronave = false;
+            aeronaveFormOriginalId = null;
+            carregarListaAeronaves();
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao salvar aeronave: ' + e.getMessage()));
+        }
+    }
+
+    /**
+     * @description Ativa/desativa uma aeronave diretamente na listagem.
+     */
+    public void alternarAtivoAeronave() {
+        String aeronaveIdParam = ApexPages.currentPage().getParameters().get('aeronaveId');
+        if (String.isBlank(aeronaveIdParam)) return;
+
+        try {
+            Aeronave__c registro = [SELECT Id, Ativo__c FROM Aeronave__c WHERE Id = :aeronaveIdParam LIMIT 1];
+            registro.Ativo__c = !registro.Ativo__c;
+            update registro;
+
+            aeronaveOptionsPrivate = null; // invalida cache dos pickers de aeronave
+
+            String mensagem = registro.Ativo__c ? 'Aeronave ativada com sucesso!' : 'Aeronave desativada com sucesso!';
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.CONFIRM, mensagem));
+
+            carregarListaAeronaves();
+        } catch (Exception e) {
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao alternar status da aeronave: ' + e.getMessage()));
+        }
+    }
+
+    /**
+     * @description Fecha o formulário de aeronave sem salvar.
+     */
+    public void cancelarEdicaoAeronave() {
+        modoEdicaoAeronave = false;
+        aeronaveFormOriginalId = null;
+        aeronaveForm = new Aeronave__c(Tipo_Frota__c = 'Locada', Ativo__c = true);
     }
 }

@@ -792,4 +792,161 @@ public class ControleHorasVooTest {
         System.assertEquals(200, abAtualizado.Quantidade__c,
             'Quantidade corrigida pelo usuário deve ter sido salva');
     }
+
+    // =============================================================================
+    // TESTES: ABA DE CADASTRO DE AERONAVES (FROTA PRÓPRIA/LOCADA)
+    // =============================================================================
+
+    @isTest
+    public static void testNovaAeronaveDefaultLocada(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        System.assertEquals('Locada', controller.aeronaveForm.Tipo_Frota__c,
+            'Nova aeronave deve vir com default Frota Locada, caso de uso principal desta aba');
+        System.assertEquals(true, controller.modoEdicaoAeronave);
+        System.assertEquals(null, controller.aeronaveFormOriginalId);
+    }
+
+    @isTest
+    public static void testCadastrarAeronaveLocadaNuncaTemIdPlaneit(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        controller.aeronaveForm.Name = 'PT-TESTE-LOCADA';
+        controller.aeronaveForm.Modelo__c = 'C-206';
+        controller.aeronaveForm.Empresa_Locadora__c = 'Locadora XPTO';
+        controller.aeronaveForm.Id_Planeit__c = 999; // tentativa de forçar valor pela UI
+
+        Test.startTest();
+        controller.salvarAeronave();
+        Test.stopTest();
+
+        Aeronave__c criada = [
+            SELECT Id, Tipo_Frota__c, Empresa_Locadora__c, Id_Planeit__c, Ativo__c
+            FROM Aeronave__c
+            WHERE Name = 'PT-TESTE-LOCADA'
+            LIMIT 1
+        ];
+        System.assertEquals('Locada', criada.Tipo_Frota__c);
+        System.assertEquals('Locadora XPTO', criada.Empresa_Locadora__c);
+        System.assertEquals(null, criada.Id_Planeit__c,
+            'Id_Planeit__c nunca deve ser gravado a partir do formulário — protege da sincronização automática do Planeit');
+        System.assertEquals(true, criada.Ativo__c);
+        System.assertEquals(false, controller.modoEdicaoAeronave, 'Formulário deve fechar após salvar');
+    }
+
+    @isTest
+    public static void testSalvarAeronaveSemNomeAdicionaErro(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        controller.aeronaveForm.Name = null;
+
+        Test.startTest();
+        controller.salvarAeronave();
+        Test.stopTest();
+
+        System.assertEquals(true, ApexPages.hasMessages(ApexPages.Severity.ERROR),
+            'Deve exibir erro de validação quando Matrícula estiver em branco');
+        System.assertEquals(0, [SELECT COUNT() FROM Aeronave__c WHERE Modelo__c = null AND Name = null]);
+    }
+
+    @isTest
+    public static void testEditarAeronaveExistente(){
+        Aeronave__c existente = new Aeronave__c(
+            Name = 'PT-TESTE-EDICAO',
+            Tipo_Frota__c = 'Propria',
+            Ativo__c = true
+        );
+        insert existente;
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String,String>{ 'aeronaveId' => String.valueOf(existente.Id) }
+        );
+        controller.editarAeronave();
+        System.assertEquals(true, controller.modoEdicaoAeronave);
+        System.assertEquals(existente.Id, controller.aeronaveFormOriginalId,
+            'Padrão idBackup: Id original deve ficar guardado, não no sObject do form');
+        System.assertEquals(null, controller.aeronaveForm.Id);
+
+        controller.aeronaveForm.Modelo__c = 'C-206H';
+
+        Test.startTest();
+        controller.salvarAeronave();
+        Test.stopTest();
+
+        Aeronave__c atualizada = [SELECT Id, Modelo__c FROM Aeronave__c WHERE Id = :existente.Id];
+        System.assertEquals('C-206H', atualizada.Modelo__c);
+        System.assertEquals(1, [SELECT COUNT() FROM Aeronave__c WHERE Name = 'PT-TESTE-EDICAO'],
+            'Edição deve fazer UPDATE, nunca criar um segundo registro');
+    }
+
+    @isTest
+    public static void testAlternarAtivoAeronave(){
+        Aeronave__c existente = new Aeronave__c(
+            Name = 'PT-TESTE-TOGGLE',
+            Tipo_Frota__c = 'Locada',
+            Ativo__c = true
+        );
+        insert existente;
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String,String>{ 'aeronaveId' => String.valueOf(existente.Id) }
+        );
+
+        Test.startTest();
+        controller.alternarAtivoAeronave();
+        Test.stopTest();
+
+        Aeronave__c desativada = [SELECT Ativo__c FROM Aeronave__c WHERE Id = :existente.Id];
+        System.assertEquals(false, desativada.Ativo__c, 'Deveria estar inativa após alternar');
+    }
+
+    @isTest
+    public static void testFiltrosListaAeronaves(){
+        insert new List<Aeronave__c>{
+            new Aeronave__c(Name = 'PT-PROPRIA-ATIVA', Tipo_Frota__c = 'Propria', Ativo__c = true),
+            new Aeronave__c(Name = 'PT-LOCADA-ATIVA', Tipo_Frota__c = 'Locada', Ativo__c = true),
+            new Aeronave__c(Name = 'PT-LOCADA-INATIVA', Tipo_Frota__c = 'Locada', Ativo__c = false)
+        };
+
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.filtroTipoFrotaAeronaves = 'Locada';
+        controller.filtroStatusAeronaves = 'ativas';
+
+        Test.startTest();
+        controller.aplicarFiltrosAeronaves();
+        Test.stopTest();
+
+        System.assertEquals(1, controller.listaAeronaves.size());
+        System.assertEquals('PT-LOCADA-ATIVA', controller.listaAeronaves[0].Name);
+    }
+
+    @isTest
+    public static void testCancelarEdicaoAeronave(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        controller.aeronaveForm.Name = 'RASCUNHO';
+
+        controller.cancelarEdicaoAeronave();
+
+        System.assertEquals(false, controller.modoEdicaoAeronave);
+        System.assertEquals(null, controller.aeronaveFormOriginalId);
+        System.assertEquals(null, controller.aeronaveForm.Name);
+    }
+
+    @isTest
+    public static void testTrocarAbaAeronavesCarregaLista(){
+        insert new Aeronave__c(Name = 'PT-TROCA-ABA', Tipo_Frota__c = 'Propria', Ativo__c = true);
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String,String>{ 'aba' => 'aeronaves' }
+        );
+
+        Test.startTest();
+        controller.trocarAba();
+        Test.stopTest();
+
+        System.assertEquals('aeronaves', controller.abaAtiva);
+        System.assertNotEquals(null, controller.listaAeronaves);
+        System.assert(controller.listaAeronaves.size() > 0);
+    }
 }

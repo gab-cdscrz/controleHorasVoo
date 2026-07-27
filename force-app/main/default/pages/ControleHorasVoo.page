@@ -2731,13 +2731,22 @@
                                     <apex:param name="aba" value="controles"/>
                                 </apex:commandButton>
                                 
-                                <apex:commandButton styleClass="tab-button {!IF(abaAtiva == 'manutencao', 'active', '')}" 
-                                                    value="Controle Técnico" 
+                                <apex:commandButton styleClass="tab-button {!IF(abaAtiva == 'manutencao', 'active', '')}"
+                                                    value="Controle Técnico"
                                                     action="{!trocarAba}"
                                                     reRender="mainForm"
                                                     status="loadingStatus"
                                                     oncomplete="onTabChange();">
                                     <apex:param name="aba" value="manutencao"/>
+                                </apex:commandButton>
+
+                                <apex:commandButton styleClass="tab-button {!IF(abaAtiva == 'aeronaves', 'active', '')}"
+                                                    value="Aeronaves"
+                                                    action="{!trocarAba}"
+                                                    reRender="mainForm"
+                                                    status="loadingStatus"
+                                                    oncomplete="onTabChange();">
+                                    <apex:param name="aba" value="aeronaves"/>
                                 </apex:commandButton>
                             </div>
                             
@@ -4148,7 +4157,229 @@
                                     </apex:outputPanel>
                                     
                                 </div> <!-- Fim da aba Controle Técnico -->
-                                
+
+                                <!-- === ABA: AERONAVES (Frota Própria/Locada) === -->
+                                <div class="tab-pane {!IF(abaAtiva == 'aeronaves', 'active', '')}">
+
+                                    <!-- Introdução -->
+                                    <div class="new-control-intro">
+                                        <h3>Cadastro de Aeronaves</h3>
+                                        <p>Gerencie a frota própria e a frota locada de terceiros. Aeronaves locadas não entram na sincronização automática com o Planeit e não possuem inspeções.</p>
+                                    </div>
+
+                                    <apex:outputPanel id="aeronavesPanel">
+
+                                        <!-- Filtros -->
+                                        <div class="card">
+                                            <div class="card-header">Filtros</div>
+                                            <div class="card-body">
+                                                <div class="filtros-linha">
+                                                    <div class="filtro-grupo">
+                                                        <label class="form-label">Tipo de Frota</label>
+                                                        <apex:selectList value="{!filtroTipoFrotaAeronaves}" size="1" styleClass="form-select">
+                                                            <apex:selectOption itemValue="" itemLabel="-- Todas --"/>
+                                                            <apex:selectOption itemValue="Propria" itemLabel="Frota Própria"/>
+                                                            <apex:selectOption itemValue="Locada" itemLabel="Frota Locada"/>
+                                                        </apex:selectList>
+                                                    </div>
+                                                    <div class="filtro-grupo">
+                                                        <label class="form-label">Status</label>
+                                                        <apex:selectList value="{!filtroStatusAeronaves}" size="1" styleClass="form-select">
+                                                            <apex:selectOption itemValue="" itemLabel="-- Todos --"/>
+                                                            <apex:selectOption itemValue="ativas" itemLabel="Somente Ativas"/>
+                                                            <apex:selectOption itemValue="inativas" itemLabel="Somente Inativas"/>
+                                                        </apex:selectList>
+                                                    </div>
+                                                    <div class="filtro-grupo filtro-acoes">
+                                                        <label class="form-label" style="opacity: 0;">Ações</label>
+                                                        <div class="acoes-calendario">
+                                                            <apex:commandButton value="Aplicar"
+                                                                                action="{!aplicarFiltrosAeronaves}"
+                                                                                styleClass="btn btn-primary"
+                                                                                reRender="pageMessagesPanel,aeronavesPanel"
+                                                                                status="loadingStatus"/>
+                                                            <apex:commandButton value="+ Nova Aeronave"
+                                                                                action="{!novaAeronave}"
+                                                                                styleClass="btn btn-outline-primary"
+                                                                                reRender="pageMessagesPanel,aeronavesPanel"
+                                                                                status="loadingStatus"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Formulário de criação/edição -->
+                                        <apex:outputPanel rendered="{!modoEdicaoAeronave}">
+                                            <div class="card">
+                                                <div class="card-header">{!tituloFormularioAeronave}</div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label required">Matrícula</label>
+                                                                <apex:inputField value="{!aeronaveForm.Name}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Modelo</label>
+                                                                <apex:inputField value="{!aeronaveForm.Modelo__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Fabricante</label>
+                                                                <apex:inputField value="{!aeronaveForm.Fabricante__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Ano de Fabricação</label>
+                                                                <apex:inputField value="{!aeronaveForm.Ano_de_Fabricacao__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Consumo (L/h)</label>
+                                                                <apex:inputField value="{!aeronaveForm.Consumo__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Consumo Translado (L/h)</label>
+                                                                <apex:inputField value="{!aeronaveForm.Consumo_translado__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Velocidade Média</label>
+                                                                <apex:inputField value="{!aeronaveForm.Velocidade_media__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Velocidade Média Translado</label>
+                                                                <apex:inputField value="{!aeronaveForm.Velocidade_media_translado__c}" styleClass="form-control"/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label required">Tipo de Frota</label>
+                                                                <apex:inputField value="{!aeronaveForm.Tipo_Frota__c}" styleClass="form-select">
+                                                                    <apex:actionSupport event="onchange" reRender="empresaLocadoraGroup" status="loadingStatus"/>
+                                                                </apex:inputField>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <apex:outputPanel id="empresaLocadoraGroup">
+                                                                <apex:outputPanel rendered="{!aeronaveForm.Tipo_Frota__c == 'Locada'}">
+                                                                    <div class="form-group">
+                                                                        <label class="form-label">Empresa Locadora</label>
+                                                                        <apex:inputField value="{!aeronaveForm.Empresa_Locadora__c}" styleClass="form-control"/>
+                                                                    </div>
+                                                                </apex:outputPanel>
+                                                            </apex:outputPanel>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="form-group">
+                                                                <label class="form-label">Ativa</label>
+                                                                <apex:inputField value="{!aeronaveForm.Ativo__c}"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-actions" style="margin-top: 16px;">
+                                                        <apex:commandButton value="Salvar"
+                                                                            action="{!salvarAeronave}"
+                                                                            styleClass="btn btn-primary"
+                                                                            reRender="pageMessagesPanel,aeronavesPanel"
+                                                                            status="loadingStatus"/>
+                                                        <apex:commandButton value="Cancelar"
+                                                                            action="{!cancelarEdicaoAeronave}"
+                                                                            styleClass="btn btn-outline-primary"
+                                                                            reRender="pageMessagesPanel,aeronavesPanel"
+                                                                            status="loadingStatus"
+                                                                            immediate="true"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </apex:outputPanel>
+
+                                        <!-- Listagem -->
+                                        <div class="card">
+                                            <div class="card-header">Aeronaves ({!listaAeronaves.size})</div>
+                                            <div class="card-body">
+                                                <apex:outputPanel rendered="{!listaAeronaves.size == 0}">
+                                                    <div class="empty-state">
+                                                        <h3>Nenhuma aeronave encontrada</h3>
+                                                        <p>Ajuste os filtros ou cadastre uma nova aeronave.</p>
+                                                    </div>
+                                                </apex:outputPanel>
+                                                <apex:outputPanel rendered="{!listaAeronaves.size > 0}">
+                                                    <table class="tabela-abast">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Matrícula</th>
+                                                                <th>Modelo</th>
+                                                                <th>Fabricante</th>
+                                                                <th>Frota</th>
+                                                                <th>Status</th>
+                                                                <th>Horas Totais</th>
+                                                                <th>Ações</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <apex:repeat value="{!listaAeronaves}" var="item">
+                                                                <tr>
+                                                                    <td>{!item.Name}</td>
+                                                                    <td>{!item.Modelo__c}</td>
+                                                                    <td>{!item.Fabricante__c}</td>
+                                                                    <td>
+                                                                        <apex:outputText value="{!IF(item.Tipo_Frota__c == 'Locada', 'Locada', 'Própria')}"/>
+                                                                    </td>
+                                                                    <td>
+                                                                        <apex:outputText value="{!IF(item.Ativo__c, 'Ativa', 'Inativa')}"/>
+                                                                    </td>
+                                                                    <td>
+                                                                        <apex:outputText value="{0, number, #####0.00}">
+                                                                            <apex:param value="{!item.Horas_Totais_de_Voo__c}"/>
+                                                                        </apex:outputText>
+                                                                    </td>
+                                                                    <td>
+                                                                        <apex:commandButton value="Editar"
+                                                                                            action="{!editarAeronave}"
+                                                                                            styleClass="btn btn-outline-primary"
+                                                                                            reRender="pageMessagesPanel,aeronavesPanel"
+                                                                                            status="loadingStatus">
+                                                                            <apex:param name="aeronaveId" value="{!item.Id}"/>
+                                                                        </apex:commandButton>
+                                                                        <apex:commandButton value="{!IF(item.Ativo__c, 'Desativar', 'Ativar')}"
+                                                                                            action="{!alternarAtivoAeronave}"
+                                                                                            styleClass="{!IF(item.Ativo__c, 'btn btn-danger', 'btn btn-primary')}"
+                                                                                            reRender="pageMessagesPanel,aeronavesPanel"
+                                                                                            status="loadingStatus">
+                                                                            <apex:param name="aeronaveId" value="{!item.Id}"/>
+                                                                        </apex:commandButton>
+                                                                    </td>
+                                                                </tr>
+                                                            </apex:repeat>
+                                                        </tbody>
+                                                    </table>
+                                                </apex:outputPanel>
+                                            </div>
+                                        </div>
+
+                                    </apex:outputPanel>
+
+                                </div> <!-- Fim da aba Aeronaves -->
+
                             </div> <!-- Fim do tab-content -->
                         </div> <!-- Fim do tabs-container -->
                         
