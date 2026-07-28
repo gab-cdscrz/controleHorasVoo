@@ -1,0 +1,2807 @@
+    /* Variáveis CSS para reutilização */
+    :root {
+    --cor-primaria: #003349;
+    --cor-secundaria: #00b3dc;
+    --cor-texto: #333;
+    --cor-texto-secundario: #6c757d;
+    --cor-borda: #ced4da;
+    --cor-fundo: #f8f9fa;
+    --cor-fundo-hover: #e9ecef;
+    --borda-radius: 8px;
+    --espacamento-padrao: 15px;
+    --transicao-padrao: all 0.3s ease;
+
+    /* Sombras padrão */
+    --sombra-card: 0 2px 4px rgba(0,0,0,0.1);
+    --sombra-card-hover: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Estilos base para o container */
+    .controle-horas-container {
+    font-family: Arial, Helvetica, sans-serif;
+    color: var(--cor-texto);
+    line-height: 1.4;
+    }
+
+    /* Container principal */
+    .controle-horas-container .main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    }
+
+    /* Telas grandes - aproveitar mais espaço */
+    @media (min-width: 1400px) {
+    .controle-horas-container .main-container {
+    max-width: 1600px;
+    }
+    }
+
+    /* Telas muito grandes - aproveitar ainda mais espaço */
+    @media (min-width: 1800px) {
+    .controle-horas-container .main-container {
+    max-width: 90%;
+    }
+    }
+
+    /* Cabeçalho */
+    .controle-horas-container .header-section {
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: white;
+    padding: 20px;
+    border-radius: var(--borda-radius);
+    margin-bottom: 20px;
+    text-align: center;
+    }
+
+    .controle-horas-container .header-section h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0 0 8px 0;
+    }
+
+    .controle-horas-container .header-section p {
+    font-size: 14px;
+    margin: 0;
+    opacity: 0.9;
+    }
+
+    /* ========================================================================
+    SISTEMA DE ABAS MODERNO - Material Design Inspired
+    ======================================================================== */
+
+    .controle-horas-container .tabs-container {
+    margin-bottom: 30px;
+    position: relative;
+    }
+
+    /* Container de navegação das abas */
+    .controle-horas-container .tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+    padding: 12px;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #e0e0e0;
+    border-bottom: 2px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    /* Separador visual entre botão de ação e abas de navegação */
+    .controle-horas-container .tabs-separator {
+    width: 1px;
+    height: 32px;
+    background: linear-gradient(180deg, transparent 0%, #dee2e6 20%, #dee2e6 80%, transparent 100%);
+    margin: 0 8px;
+    }
+
+    /* Botão de ação primária - Destaque para "Novo Voo" */
+    .controle-horas-container .tab-button.action-primary {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-width: 160px;
+    text-align: center;
+    }
+
+    .controle-horas-container .tab-button.action-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    }
+
+    .controle-horas-container .tab-button.action-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.35);
+    }
+
+    .controle-horas-container .tab-button.action-primary:hover::before {
+    opacity: 1;
+    }
+
+    .controle-horas-container .tab-button.action-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+
+    .controle-horas-container .tab-button.action-primary.active {
+    background: linear-gradient(135deg, #218838 0%, #1ea57a 100%);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4), inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Abas regulares de navegação */
+    .controle-horas-container .tab-button {
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+    padding: 14px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6c757d;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+    }
+
+    /* Efeito de hover nas abas regulares */
+    .controle-horas-container .tab-button:hover:not(.action-primary) {
+    background: rgba(0, 51, 73, 0.06);
+    color: var(--cor-primaria);
+    transform: translateY(-1px);
+    }
+
+    /* Aba ativa - Design elevado com gradiente azul */
+    .controle-horas-container .tab-button.active:not(.action-primary) {
+    background: linear-gradient(135deg, #003349 0%, #004a66 100%);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 51, 73, 0.25);
+    border-bottom: 3px solid var(--cor-secundaria);
+    }
+
+    /* Indicador de foco para acessibilidade */
+    .controle-horas-container .tab-button:focus {
+    outline: 3px solid rgba(0, 179, 220, 0.4);
+    outline-offset: 2px;
+    }
+
+    /* Container do conteúdo das abas */
+    .controle-horas-container .tab-content {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 0 0 8px 8px;
+    min-height: 500px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+    }
+
+    /* Painéis individuais de cada aba */
+    .controle-horas-container .tab-pane {
+    display: none;
+    padding: 24px;
+    animation: fadeIn 0.4s ease-in-out;
+    }
+
+    .controle-horas-container .tab-pane.active {
+    display: block;
+    }
+
+    /* Animação de entrada suave */
+    @keyframes fadeIn {
+    from {
+    opacity: 0;
+    transform: translateY(8px);
+    }
+    to {
+    opacity: 1;
+    transform: translateY(0);
+    }
+    }
+
+    /* ========================================================================
+    RESPONSIVIDADE DO SISTEMA DE ABAS
+    ======================================================================== */
+
+    /* Tablets e telas médias */
+    @media (max-width: 992px) {
+    .controle-horas-container .tabs-nav {
+    flex-wrap: wrap;
+    padding: 10px;
+    gap: 6px;
+    }
+
+    .controle-horas-container .tab-button.action-primary {
+    flex: 1 1 100%;
+    min-width: 100%;
+    margin-bottom: 6px;
+    }
+
+    .controle-horas-container .tabs-separator {
+    display: none;
+    }
+
+    .controle-horas-container .tab-button {
+    flex: 1 1 calc(50% - 6px);
+    min-width: calc(50% - 6px);
+    }
+    }
+
+    /* Mobile */
+    @media (max-width: 576px) {
+    .controle-horas-container .tabs-nav {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    }
+
+    .controle-horas-container .tab-button.action-primary,
+    .controle-horas-container .tab-button {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    text-align: center;
+    }
+
+    .controle-horas-container .tab-content {
+    border-radius: 8px;
+    }
+
+    .controle-horas-container .tab-pane {
+    padding: 16px;
+    }
+    }
+
+    /* Touch targets para acessibilidade mobile */
+    @media (hover: none) and (pointer: coarse) {
+    .controle-horas-container .tab-button {
+    min-height: 44px;
+    padding: 16px 20px;
+    }
+    }
+
+    /* === VISUALIZAÇÃO HIERÁRQUICA === */
+    .controle-horas-container .aeronave-group {
+    margin-bottom: 25px;
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--borda-radius);
+    overflow: hidden;
+    }
+
+    .controle-horas-container .aeronave-header {
+    background: linear-gradient(135deg, var(--cor-primaria), #004a66);
+    color: white;
+    padding: var(--espacamento-padrao) 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    transition: background 0.3s ease;
+    }
+
+    .controle-horas-container .aeronave-header:hover {
+    background: linear-gradient(135deg, #004a66, #006699);
+    }
+
+    .controle-horas-container .aeronave-content {
+    background: white;
+    }
+
+    .controle-horas-container .ano-group {
+    border-top: 1px solid #e9ecef;
+    }
+
+    .controle-horas-container .ano-header {
+    background: var(--cor-fundo);
+    padding: 12px 40px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    color: var(--cor-primaria);
+    transition: var(--transicao-padrao);
+    }
+
+    .controle-horas-container .ano-header:hover {
+    background: var(--cor-fundo-hover);
+    }
+
+    .controle-horas-container .mes-header {
+    background: #fefefe;
+    padding: 10px 40px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #495057;
+    transition: var(--transicao-padrao);
+    }
+
+    .controle-horas-container .mes-header:hover {
+    background: var(--cor-fundo);
+    }
+
+    /* Totais e detalhes */
+    .controle-horas-container .ano-totals,
+    .controle-horas-container .mes-totals {
+    font-size: 12px;
+    color: var(--cor-texto-secundario);
+    font-weight: normal;
+    }
+
+    .controle-horas-container .mes-totals {
+    font-size: 11px;
+    color: #868e96;
+    }
+
+    .controle-horas-container .controle-item {
+    padding: var(--espacamento-padrao) 40px;
+    border-top: 1px solid var(--cor-fundo);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transicao-padrao);
+    }
+
+    /* Reduzir ainda mais em tablets */
+    @media (max-width: 992px) {
+    .controle-horas-container .controle-item {
+    padding: var(--espacamento-padrao) 25px;
+    }
+    }
+
+    .controle-horas-container .controle-item:hover {
+    background: #f0f8ff;
+    }
+
+    .controle-horas-container .controle-main {
+    flex: 1;
+    }
+
+    .controle-horas-container .controle-data {
+    font-weight: bold;
+    color: var(--cor-primaria);
+    margin-bottom: 3px;
+    }
+
+    .controle-horas-container .controle-detalhes {
+    font-size: 13px;
+    color: var(--cor-texto-secundario);
+    line-height: 1.3;
+    }
+
+    .controle-horas-container .expand-icon {
+    font-family: monospace;
+    font-size: 16px;
+    margin-right: 10px;
+    transition: transform 0.3s ease;
+    display: inline-block;
+    min-width: 16px;
+    }
+
+    /* Fallback para ícones */
+    .controle-horas-container .expand-icon:empty::before {
+    content: '▼';
+    }
+
+    /* Estado vazio */
+    .controle-horas-container .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--cor-texto-secundario);
+    }
+
+    .controle-horas-container .empty-state-icon {
+    font-size: 48px;
+    color: #dee2e6;
+    margin-bottom: var(--espacamento-padrao);
+    }
+
+    /* === NOVO VOO === */
+    .controle-horas-container .new-control-intro {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 2px solid var(--cor-secundaria);
+    border-radius: var(--borda-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    }
+
+    .controle-horas-container .new-control-intro h3 {
+    color: var(--cor-primaria);
+    margin: 0 0 10px 0;
+    }
+
+    /* === ESTILOS PARA ABASTECIMENTO === */
+
+    /* Versão discreta do toggle (dentro do card de aeronave) */
+    .controle-horas-container .abastecimento-toggle-discreto {
+    background: #fffbf0;
+    border: 1px solid #ffe0a3;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-top: 15px;
+    }
+
+    .controle-horas-container .abastecimento-toggle-discreto label {
+    font-weight: 500;
+    color: #856404;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    user-select: none;
+    }
+
+    .controle-horas-container .abastecimento-toggle-discreto input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
+    }
+
+    .controle-horas-container .abastecimento-icone-small {
+    font-size: 14px;
+    }
+
+    .controle-horas-container .alert-abastecimento {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    border-radius: var(--borda-radius);
+    padding: 10px 14px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    }
+
+    .controle-horas-container .alert-abastecimento strong {
+    font-weight: bold;
+    }
+
+    /* Campos ocultos quando modo abastecimento */
+    .controle-horas-container .campo-oculto-abastecimento {
+    opacity: 0.4;
+    pointer-events: none;
+    }
+
+    /* === TABELA DE ABASTECIMENTOS INLINE === */
+    .controle-horas-container .abastecimentos-detalhe {
+    margin-top: 6px;
+    }
+    .controle-horas-container .abastecimentos-lista {
+    margin-top: 8px;
+    overflow-x: auto;
+    border-radius: 6px;
+    border: 1px solid #e3eef5;
+    }
+    .controle-horas-container .sem-abastecimento-placeholder {
+    text-align: center;
+    padding: 20px 16px;
+    font-size: 13px;
+    color: #adb5bd;
+    font-style: italic;
+    letter-spacing: 0.02em;
+    background: #fafafa;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+    }
+    .controle-horas-container .tabela-abast {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    }
+    .controle-horas-container .tabela-abast th {
+    background: #e8f4f8;
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 2px solid #c5dfe8;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--cor-primaria);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    }
+    .controle-horas-container .tabela-abast td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f1f3f5;
+    color: #212529;
+    vertical-align: middle;
+    }
+    .controle-horas-container .tabela-abast tr:last-child td {
+    border-bottom: none;
+    }
+    .controle-horas-container .tabela-abast tbody tr:hover td {
+    background: #f5fbfd;
+    }
+    .controle-horas-container .badge-faturado,
+    .controle-horas-container .badge-nao-faturado {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s;
+    }
+    .controle-horas-container .badge-faturado:hover,
+    .controle-horas-container .badge-nao-faturado:hover {
+    opacity: 0.8;
+    }
+    .controle-horas-container .badge-faturado {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+    }
+    .controle-horas-container .badge-nao-faturado {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    }
+    .controle-horas-container .abast-badge {
+    font-size: 10px;
+    background: #e9ecef;
+    color: #495057;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-left: 2px;
+    }
+    .controle-horas-container .abast-valor-vazio {
+    color: #ced4da;
+    font-style: italic;
+    font-size: 11px;
+    }
+
+    /* === FORMULÁRIOS === */
+    .controle-horas-container .form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    }
+
+    .controle-horas-container .form-group.single-field {
+    flex: 1 1 100%;
+    width: 100%;
+    }
+
+    .controle-horas-container .form-group.half-width {
+    flex: 1 1 45%;
+    min-width: 280px;
+    }
+
+    .controle-horas-container .form-group.third-width {
+    flex: 1 1 30%;
+    min-width: 200px;
+    }
+
+    /* Estados de campos desabilitados e somente leitura */
+    .controle-horas-container .form-control.disabled,
+    .controle-horas-container .form-select.disabled,
+    .controle-horas-container input.disabled,
+    .controle-horas-container textarea.disabled,
+    .controle-horas-container select.disabled {
+    background-color: var(--cor-fundo) !important;
+    color: var(--cor-texto-secundario) !important;
+    cursor: not-allowed !important;
+    opacity: 0.65 !important;
+    border: 1px solid #e9ecef !important;
+    box-shadow: none !important;
+    }
+
+    .controle-horas-container .readonly-field {
+    background-color: #e9ecef !important;
+    color: #495057 !important;
+    border: 2px dashed var(--cor-borda) !important;
+    cursor: default !important;
+    font-weight: 600 !important;
+    }
+
+    /* Estilo para campos readonly em modo de visualização */
+    .controle-horas-container .readonly-display {
+    display: block;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: #f8f9fa;
+    }
+
+    /* Cards e containers */
+    .controle-horas-container .card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: var(--borda-radius);
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .controle-horas-container .card-header {
+    background: linear-gradient(135deg, var(--cor-primaria), #004a66);
+    color: white;
+    padding: var(--espacamento-padrao) 20px;
+    border-radius: calc(var(--borda-radius) - 1px) calc(var(--borda-radius) - 1px) 0 0;
+    font-weight: bold;
+    font-size: 16px;
+    }
+
+    .controle-horas-container .card-body {
+    padding: 20px;
+    }
+
+    /* Elementos de formulário */
+    .controle-horas-container .form-group {
+    margin-bottom: var(--espacamento-padrao);
+    }
+
+    .controle-horas-container .form-label {
+    display: block;
+    font-weight: bold;
+    color: var(--cor-primaria);
+    margin-bottom: 5px;
+    font-size: 13px;
+    }
+
+    .controle-horas-container .form-label.required::after {
+    content: ' *';
+    color: red;
+    }
+
+    .controle-horas-container .form-control,
+    .controle-horas-container .form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: var(--borda-radius);
+    font-size: 14px;
+    box-sizing: border-box;
+    }
+
+    .controle-horas-container .form-control:focus,
+    .controle-horas-container .form-select:focus {
+    border-color: var(--cor-secundaria);
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 179, 220, 0.3);
+    }
+
+    /* Botões e ações */
+    .controle-horas-container .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #dee2e6;
+    margin-top: 20px;
+    align-items: center;
+    }
+
+    .controle-horas-container .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--borda-radius);
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    }
+
+    .controle-horas-container .btn-primary {
+    background: var(--cor-secundaria);
+    color: white;
+    }
+
+    .controle-horas-container .btn-primary:hover {
+    background: #0099cc;
+    }
+
+    .controle-horas-container .btn-success {
+    background: #28a745;
+    color: white;
+    }
+
+    .controle-horas-container .btn-outline-primary {
+    border: 1px solid var(--cor-secundaria);
+    color: var(--cor-secundaria);
+    background: transparent;
+    }
+
+    .controle-horas-container .btn-outline-primary:hover {
+    background: var(--cor-secundaria);
+    color: white;
+    }
+
+    /* Alertas e carregamento */
+    .controle-horas-container .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    }
+
+    .controle-horas-container .loading-content {
+    background: white;
+    padding: 20px;
+    border-radius: var(--borda-radius);
+    text-align: center;
+    }
+
+    .controle-horas-container .loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    border-top-color: var(--cor-secundaria);
+    animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+    to { transform: rotate(360deg); }
+    }
+
+    /* ========================================================================
+    SISTEMA DE CONTROLE TÉCNICO - DESIGN MODERNO
+    ======================================================================== */
+
+    /* Container grid para cards do controle técnico */
+    .controle-horas-container .controle-tecnico-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+    }
+
+    /* Otimização para telas grandes */
+    @media (min-width: 1400px) {
+    .controle-horas-container .controle-tecnico-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    }
+    }
+
+    /* Campos de valor somente leitura - Design moderno SEM borda ciano */
+    .controle-horas-container .readonly-display {
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cor-texto);
+    border: none;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    }
+
+    /* Seção de cálculos técnicos redesenhada */
+    .controle-horas-container .calculos-tecnicos-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--borda-radius);
+    margin-top: 24px;
+    box-shadow: var(--sombra-card);
+    overflow: hidden;
+    }
+
+    .controle-horas-container .calculos-tecnicos-body {
+    padding: 24px;
+    }
+
+    .controle-horas-container .calculos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    }
+
+    /* Otimização para telas grandes */
+    @media (min-width: 1400px) {
+    .controle-horas-container .calculos-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    }
+    }
+
+    .controle-horas-container .calculo-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid #e9ecef;
+    transition: var(--transicao-padrao);
+    }
+
+    .controle-horas-container .calculo-item:hover {
+    background: #f0f4f8;
+    border-color: var(--cor-secundaria);
+    }
+
+    .controle-horas-container .calculo-item-label {
+    font-size: 12px;
+    color: var(--cor-texto-secundario);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    }
+
+    .controle-horas-container .calculo-item-valor {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--cor-primaria);
+    line-height: 1.2;
+    }
+
+    .controle-horas-container .calculo-item-unidade {
+    font-size: 14px;
+    color: var(--cor-texto-secundario);
+    font-weight: 400;
+    margin-left: 4px;
+    }
+
+    /* Alerta informativo moderno */
+    .controle-horas-container .info-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #e3f2fd;
+    border-radius: 8px;
+    border-left: 4px solid #2196f3;
+    margin-bottom: 20px;
+    }
+
+    .controle-horas-container .info-banner-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    }
+
+    .controle-horas-container .info-banner-text {
+    font-size: 13px;
+    color: #1565c0;
+    line-height: 1.5;
+    }
+
+    .controle-horas-container .info-banner-text strong {
+    font-weight: 600;
+    }
+
+    /* Card de intervalo de inspeção */
+    .controle-horas-container .intervalo-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: var(--sombra-card);
+    }
+
+    /* Garantir position relative para cards de inspeção */
+    .inspecao-card {
+    position: relative;
+    overflow: hidden;
+    }
+
+    .controle-horas-container .intervalo-card-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cor-primaria);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    }
+
+    .controle-horas-container .intervalo-proxima {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    }
+
+    .controle-horas-container .intervalo-proxima-label {
+    font-size: 11px;
+    color: var(--cor-texto-secundario);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    }
+
+    .controle-horas-container .intervalo-proxima-valor {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cor-primaria);
+    }
+
+    /* Card de intervalo com status vencido (fundo vermelho) */
+    .controle-horas-container .intervalo-proxima-vencida {
+    background: linear-gradient(135deg, #ffeaea 0%, #ffcccc 100%);
+    border: 1px solid #f5a5a5;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    }
+
+    .controle-horas-container .intervalo-proxima-vencida .intervalo-proxima-label {
+    font-size: 11px;
+    color: #a94442;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    }
+
+    .controle-horas-container .intervalo-proxima-vencida .intervalo-proxima-valor {
+    font-size: 18px;
+    font-weight: 700;
+    color: #c62828;
+    }
+
+    /* Card de inspeção vencida com marca d'água diagonal */
+    .controle-horas-container .intervalo-card.card-vencida,
+    .controle-tecnico-grid .intervalo-card.card-vencida,
+    .inspecao-card.card-vencida {
+    position: relative !important;
+    background: linear-gradient(135deg, #fff8f8 0%, #ffebeb 100%) !important;
+    border: 1px solid #f5c6cb !important;
+    overflow: hidden !important;
+    }
+
+    .controle-horas-container .intervalo-card.card-vencida::before,
+    .controle-tecnico-grid .intervalo-card.card-vencida::before,
+    .inspecao-card.card-vencida::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    /* Padrão repetido de "Vencida" em diagonal usando SVG */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='14' font-weight='bold' fill='rgba(220,53,69,0.18)'%3EVencida%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    transform: rotate(-35deg);
+    pointer-events: none;
+    z-index: 1;
+    user-select: none;
+    }
+
+    .controle-horas-container .intervalo-card.card-vencida > *,
+    .controle-tecnico-grid .intervalo-card.card-vencida > *,
+    .inspecao-card.card-vencida > * {
+    position: relative;
+    z-index: 2;
+    }
+
+    .controle-horas-container .intervalo-card.card-vencida .intervalo-card-header,
+    .controle-tecnico-grid .intervalo-card.card-vencida .intervalo-card-header,
+    .inspecao-card.card-vencida .intervalo-card-header {
+    color: #c62828;
+    }
+
+    /* Responsividade para controle técnico */
+    @media (max-width: 768px) {
+    .controle-horas-container .controle-tecnico-grid {
+    grid-template-columns: 1fr;
+    }
+
+    .controle-horas-container .calculos-grid {
+    grid-template-columns: 1fr 1fr;
+    }
+
+    .controle-horas-container .calculo-item-valor {
+    font-size: 20px;
+    }
+    }
+
+    @media (max-width: 480px) {
+    .controle-horas-container .calculos-grid {
+    grid-template-columns: 1fr;
+    }
+    }
+
+    /* Layout de grade */
+    .controle-horas-container .row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -10px;
+    }
+
+    .controle-horas-container .col {
+    padding: 0 10px;
+    flex: 1;
+    min-width: 200px;
+    }
+
+    /* Ajustar para telas muito pequenas */
+    @media (max-width: 576px) {
+    .controle-horas-container .col {
+    min-width: 100%;
+    }
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+    .controle-horas-container .form-row {
+    flex-direction: column;
+    gap: var(--espacamento-padrao);
+    }
+
+    .controle-horas-container .form-group.half-width,
+    .controle-horas-container .form-group.third-width,
+    .controle-horas-container .col {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: auto;
+    }
+
+    .controle-horas-container .form-actions,
+    .controle-horas-container .tabs-nav {
+    flex-direction: column;
+    }
+
+    .controle-horas-container .btn {
+    width: 100%;
+    text-align: center;
+    }
+
+    .controle-horas-container .controle-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--espacamento-padrao) 40px;
+    }
+
+    .controle-horas-container .mes-header,
+    .controle-horas-container .ano-header {
+    padding-left: 20px;
+    padding-right: 15px;
+    }
+
+    .controle-horas-container .controle-item {
+    padding: var(--espacamento-padrao) 20px;
+    }
+    }
+
+    /* Telas muito pequenas - ajustes adicionais */
+    @media (max-width: 480px) {
+    .controle-horas-container .ano-header {
+    padding: 10px 15px;
+    font-size: 14px;
+    }
+
+    .controle-horas-container .mes-header {
+    padding: 8px 15px;
+    font-size: 13px;
+    }
+
+    .controle-horas-container .controle-item {
+    padding: 12px 15px;
+    }
+
+    .controle-horas-container .main-container {
+    padding: 10px;
+    }
+
+    .controle-horas-container .card-body {
+    padding: 15px;
+    }
+    }
+
+    /* Correção para campo de data - evita duplicação de valor */
+    .controle-horas-container .dateFormat {
+    display: block !important;
+    }
+
+    /* Alertas informativos */
+    .controle-horas-container .alert {
+    border-radius: var(--borda-radius);
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    line-height: 1.4;
+    }
+
+    .controle-horas-container .alert-info {
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+    color: #1565c0;
+    }
+
+    .controle-horas-container .alert-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    }
+
+    /* Estilos para calendário */
+
+    /* Filtros do Calendário */
+    .controle-horas-container .calendario-filtros {
+    background: var(--cor-fundo);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--borda-radius);
+    padding: var(--espacamento-padrao);
+    margin-bottom: 20px;
+    position: relative;
+    }
+
+    .controle-horas-container .filtros-titulo {
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: var(--cor-primaria);
+    font-size: 16px;
+    }
+
+    /* Botão Sincronizar - Estilo Marca D'água */
+    .controle-horas-container .btn-sincronizar-ghost {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: 1px solid rgba(222, 226, 230, 0.4);
+    color: #ced4da;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 300;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0.4;
+    }
+
+    .controle-horas-container .btn-sincronizar-ghost:hover {
+    border-color: rgba(173, 181, 189, 0.6);
+    color: #adb5bd;
+    opacity: 0.8;
+    background: rgba(248, 249, 250, 0.3);
+    }
+
+    .controle-horas-container .btn-sincronizar-ghost:active {
+    opacity: 1;
+    background: rgba(233, 236, 239, 0.4);
+    }
+
+    .controle-horas-container .filtros-linha {
+    display: flex;
+    gap: 15px;
+    align-items: end;
+    flex-wrap: wrap;
+    }
+
+    .controle-horas-container .filtro-grupo {
+    flex: 1;
+    min-width: 180px;
+    }
+
+    .controle-horas-container .filtro-aeronave {
+    flex: 2;
+    min-width: 250px;
+    }
+
+    .controle-horas-container .filtro-acoes {
+    flex: 3;
+    min-width: 300px;
+    }
+
+    .controle-horas-container .acoes-calendario {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    }
+
+    /* Resumo Mensal */
+    .controle-horas-container .resumo-mensal {
+    background: linear-gradient(135deg, var(--cor-primaria), var(--cor-secundaria));
+    color: white;
+    border-radius: var(--borda-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    }
+
+    .controle-horas-container .resumo-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 20px;
+    font-weight: bold;
+    }
+
+    .controle-horas-container .resumo-stats {
+    display: flex;
+    gap: 30px;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    }
+
+    .controle-horas-container .stat-item {
+    text-align: center;
+    min-width: 80px;
+    }
+
+    .controle-horas-container .stat-numero {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    }
+
+    .controle-horas-container .stat-label {
+    font-size: 12px;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    }
+
+    /* Container do Calendário */
+    .controle-horas-container .calendario-container {
+    background: white;
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--borda-radius);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Header com dias da semana */
+    .controle-horas-container .calendario-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--cor-primaria);
+    color: white;
+    }
+
+    .controle-horas-container .dia-semana {
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 13px;
+    border-right: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .controle-horas-container .dia-semana:last-child {
+    border-right: none;
+    }
+
+    /* Grid do calendário */
+    .controle-horas-container .calendario-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-top: 1px solid var(--cor-borda);
+    gap: 0;
+    }
+
+    /* Célula do dia */
+    .controle-horas-container .dia-celula {
+    height: 140px;
+    min-height: 180px;
+    max-height: 180px;
+    border-right: 1px solid var(--cor-borda);
+    border-bottom: 1px solid var(--cor-borda);
+    position: relative;
+    padding: 0;
+    transition: var(--transicao-padrao);
+    overflow: hidden;
+    box-sizing: border-box;
+    }
+
+    /* Área de conteúdo com scroll */
+    .controle-horas-container .dia-conteudo {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px;
+    padding-bottom: 30px;
+    box-sizing: border-box;
+    }
+
+    /* Rodapé fixo com botões flutuantes - SEM FUNDO */
+    .controle-horas-container .dia-rodape {
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+    }
+
+    /* Ações devem receber cliques */
+    .controle-horas-container .dia-rodape .dia-acoes {
+    pointer-events: auto;
+    }
+
+    /* Células com voo - manter scroll suave */
+    .controle-horas-container .dia-celula.dia-com-voo .dia-conteudo {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 transparent;
+    }
+
+    .controle-horas-container .dia-celula.dia-com-voo .dia-conteudo::-webkit-scrollbar {
+    width: 4px;
+    }
+
+    .controle-horas-container .dia-celula.dia-com-voo .dia-conteudo::-webkit-scrollbar-track {
+    background: transparent;
+    }
+
+    .controle-horas-container .dia-celula.dia-com-voo .dia-conteudo::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
+    }
+
+    .controle-horas-container .dia-celula.dia-com-voo .dia-conteudo::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+    }
+
+    .controle-horas-container .dia-celula:nth-child(7n) {
+    border-right: none;
+    }
+
+    .controle-horas-container .dia-celula:hover {
+    background: #f8f9fa;
+    }
+
+    /* Número do dia */
+    .controle-horas-container .dia-numero {
+    font-weight: bold;
+    font-size: 13px;
+    color: var(--cor-texto);
+    margin-bottom: 3px;
+    }
+
+    /* Estados dos dias */
+    .controle-horas-container .dia-sem-voo {
+    background: #ffffff;
+    }
+
+    .controle-horas-container .dia-com-voo {
+    background: #e8f5e8;
+    border-left: 4px solid #28a745;
+    }
+
+    .controle-horas-container .dia-outro-mes {
+    background: #f8f9fa;
+    opacity: 0.6;
+    }
+
+    .controle-horas-container .dia-outro-mes .dia-numero {
+    color: #6c757d;
+    }
+
+    .controle-horas-container .dia-hoje {
+    border: 2px solid var(--cor-secundaria) !important;
+    box-shadow: 0 0 10px rgba(0, 179, 220, 0.3);
+    }
+
+    .controle-horas-container .fim-semana {
+    background: #fafbfc;
+    }
+
+    .controle-horas-container .fim-semana.dia-com-voo {
+    background: #e6ffe6;
+    }
+
+    /* Informações do voo - adaptado para múltiplos voos */
+    .controle-horas-container .voo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 10px;
+    margin-bottom: 4px;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(44, 44, 44, 0.2);
+    }
+
+    .controle-horas-container .voo-info:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    }
+
+    .controle-horas-container .piloto-nome {
+    font-weight: bold;
+    color: var(--cor-primaria);
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+
+    .controle-horas-container .descricao-voo {
+    color: var(--cor-texto-secundario);
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+
+    .controle-horas-container .horas-voo {
+    font-weight: bold;
+    color: #28a745;
+    font-size: 12px;
+    }
+
+    .controle-horas-container .rota {
+    color: var(--cor-texto-secundario);
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+
+    .controle-horas-container .operador {
+    color: var(--cor-texto-secundario);
+    font-size: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    }
+
+    .controle-horas-container .tipo-voo {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 8px;
+    color: white;
+    font-size: 8px;
+    font-weight: bold;
+    text-align: center;
+    min-width: 18px;
+    margin-top: 1px;
+    }
+
+    /* Cores específicas por tipo de voo */
+    .controle-horas-container .tipo-voo.tipo-TR { background-color: #007bff; }
+    .controle-horas-container .tipo-voo.tipo-SA { background-color: #28a745; }
+    .controle-horas-container .tipo-voo.tipo-EX { background-color: #ffc107; }
+    .controle-horas-container .tipo-voo.tipo-TT { background-color: #dc3545; }
+    .controle-horas-container .tipo-voo.tipo-AB { background-color: #ff9800; }
+
+    .controle-horas-container .combustivel-info {
+    color: var(--cor-texto-secundario);
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    }
+
+    /* Ações do dia */
+    .controle-horas-container .dia-acoes {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    }
+
+    .controle-horas-container .btn-acao {
+    padding: 3px 5px;
+    border: none;
+    border-radius: 3px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: var(--transicao-padrao);
+    min-width: 22px;
+    height: 22px;
+    font-weight: bold;
+    }
+
+    .controle-horas-container .btn-visualizar {
+    background: #17a2b8;
+    color: white;
+    }
+
+    .controle-horas-container .btn-visualizar:hover {
+    background: #138496;
+    }
+
+    .controle-horas-container .btn-adicionar {
+    background: #28a745;
+    color: white;
+    font-weight: bold;
+    }
+
+    .controle-horas-container .btn-adicionar:hover {
+    background: #218838;
+    }
+
+    /* ========================================================================
+    MODAL DE DETALHES DE VOO
+    ======================================================================== */
+    .controle-horas-container .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    }
+
+    .controle-horas-container .modal-content {
+    background: #fff;
+    border-radius: 10px;
+    max-width: 700px;
+    width: 92%;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(0,0,51,0.22);
+    display: flex;
+    flex-direction: column;
+    }
+
+    /* Modal maior em telas grandes */
+    @media (min-width: 1400px) {
+    .controle-horas-container .modal-content {
+    max-width: 950px;
+    }
+    }
+
+    .controle-horas-container .modal-header {
+    background: linear-gradient(135deg, var(--cor-primaria) 0%, #004a66 100%);
+    color: white;
+    padding: 18px 24px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    }
+
+    .controle-horas-container .modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    }
+
+    .controle-horas-container .btn-fechar-modal {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: var(--transicao-padrao);
+    flex-shrink: 0;
+    }
+
+    .controle-horas-container .btn-fechar-modal:hover {
+    background: rgba(255,255,255,0.2);
+    }
+
+    .controle-horas-container .modal-body {
+    padding: 24px;
+    flex: 1;
+    }
+
+    /* Metadado "Registrado em" */
+    .controle-horas-container .modal-metadado {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #eef6fb;
+    border-left: 3px solid var(--cor-secundaria);
+    border-radius: 0 4px 4px 0;
+    padding: 7px 12px;
+    font-size: 12px;
+    color: #495057;
+    margin-bottom: 16px;
+    }
+
+    /* Seções internas do modal */
+    .controle-horas-container .modal-secao {
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid var(--cor-secundaria);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    }
+
+    .controle-horas-container .modal-secao-titulo {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--cor-secundaria);
+    margin: 0 0 12px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ddf0f7;
+    }
+
+    /* Cabeçalho individual de voo (multi-voo) */
+    .controle-horas-container .voo-cabecalho-modal {
+    background: linear-gradient(to right, #eaf6fd, #ffffff);
+    border-left: 4px solid var(--cor-secundaria);
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin: 14px 0 16px 0;
+    }
+    .controle-horas-container .voo-cabecalho-modal .voo-cabecalho-titulo {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cor-primaria);
+    margin: 0 0 2px 0;
+    }
+    .controle-horas-container .voo-cabecalho-modal .voo-cabecalho-sub {
+    font-size: 12px;
+    color: var(--cor-texto-secundario);
+    margin: 0;
+    }
+
+    /* Grid de detalhes dentro das seções */
+    .controle-horas-container .detalhes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    }
+
+    .controle-horas-container .detalhe-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    }
+
+    .controle-horas-container .detalhe-full {
+    grid-column: 1 / -1;
+    }
+
+    .controle-horas-container .detalhe-item label {
+    font-weight: 700;
+    color: var(--cor-primaria);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    }
+
+    .controle-horas-container .detalhe-item span {
+    color: #212529;
+    font-size: 14px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed #e9ecef;
+    min-height: 22px;
+    }
+
+    /* Valor vazio */
+    .controle-horas-container .detalhe-valor-vazio {
+    color: #adb5bd;
+    font-style: italic;
+    font-size: 13px;
+    }
+
+    .controle-horas-container .sem-voo-info {
+    text-align: center;
+    padding: 40px 30px;
+    color: var(--cor-texto-secundario);
+    }
+
+    /* Ações por voo */
+    .controle-horas-container .acoes-voo-individual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 6px 0;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    }
+
+    .controle-horas-container .acoes-voo-individual .btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background 0.2s;
+    }
+
+    .controle-horas-container .acoes-voo-individual .btn-danger:hover {
+    background: #c82333;
+    }
+
+    .controle-horas-container .modal-footer {
+    background: #f8f9fa;
+    padding: 14px 24px;
+    border-radius: 0 0 10px 10px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    }
+
+    /* ========================================================================
+    ESTILOS PARA INSPEÇÕES PRÓXIMAS NO CALENDÁRIO
+    ======================================================================== */
+
+    .inspecoes-proximas-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    }
+
+    .inspecoes-proximas-header {
+    text-align: center;
+    margin-bottom: 20px;
+    }
+
+    .inspecoes-proximas-header h4 {
+    margin: 0 0 8px 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    }
+
+    .inspecoes-proximas-header .icon-wrench {
+    font-size: 24px;
+    }
+
+    .inspecoes-proximas-header .subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: #6c757d;
+    font-weight: 400;
+    }
+
+    .inspecoes-proximas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+    }
+
+    /* Otimização para telas grandes */
+    @media (min-width: 1400px) {
+    .inspecoes-proximas-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    }
+    }
+
+    .inspecao-card-mini {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    }
+
+    .inspecao-card-mini:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    border-color: var(--cor-primaria);
+    }
+
+    .inspecao-card-mini.inspecao-vencida {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+    border-color: #dc3545;
+    }
+
+    .inspecao-card-mini.inspecao-vencida::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 40px 40px 0;
+    border-color: transparent #dc3545 transparent transparent;
+    }
+
+    .inspecao-nome {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e9ecef;
+    }
+
+    .inspecao-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+    justify-content: center;
+    }
+
+    .inspecao-status.vencida {
+    background: #dc3545;
+    color: white;
+    }
+
+    .inspecao-proxima {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #dee2e6;
+    }
+
+    .inspecao-proxima .label {
+    font-size: 12px;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    }
+
+    .inspecao-proxima .valor {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cor-primaria);
+    }
+
+    .inspecao-restante {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    margin-top: 4px;
+    }
+
+    .inspecao-restante .label {
+    font-size: 11px;
+    color: #868e96;
+    }
+
+    .inspecao-restante .valor {
+    font-size: 14px;
+    font-weight: 700;
+    color: #28a745;
+    }
+
+    .inspecoes-link {
+    text-align: center;
+    padding-top: 12px;
+    border-top: 1px solid #e9ecef;
+    }
+
+    .inspecoes-link .ver-todas {
+    color: var(--cor-primaria);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    }
+
+    .inspecoes-link .ver-todas:hover {
+    color: var(--cor-secundaria);
+    text-decoration: underline;
+    gap: 10px;
+    }
+
+    /* Responsividade para cards de inspeção */
+    @media (max-width: 768px) {
+    .inspecoes-proximas-grid {
+    grid-template-columns: 1fr;
+    }
+
+    .inspecoes-proximas-container {
+    padding: 16px;
+    }
+
+    .inspecao-card-mini {
+    padding: 12px;
+    }
+    }
+
+    /* Responsividade do Calendário */
+    @media (max-width: 768px) {
+    .controle-horas-container .filtros-linha {
+    flex-direction: column;
+    gap: 10px;
+    }
+
+    .controle-horas-container .filtro-grupo,
+    .controle-horas-container .filtro-aeronave,
+    .controle-horas-container .filtro-acoes {
+    flex: 1 1 100%;
+    min-width: auto;
+    }
+
+    .controle-horas-container .acoes-calendario {
+    justify-content: center;
+    }
+
+    .controle-horas-container .resumo-stats {
+    gap: 15px;
+    }
+
+    .controle-horas-container .stat-item {
+    min-width: 60px;
+    }
+
+    .controle-horas-container .stat-numero {
+    font-size: 18px;
+    }
+
+    .controle-horas-container .dia-celula {
+    height: 120px;
+    min-height: 120px;
+    max-height: 120px;
+    }
+
+    .controle-horas-container .dia-conteudo {
+    padding: 4px;
+    }
+
+    .controle-horas-container .dia-rodape {
+    bottom: 3px;
+    }
+
+    .controle-horas-container .voo-info {
+    font-size: 10px;
+    }
+
+    .controle-horas-container .piloto-nome {
+    font-size: 10px;
+    }
+
+    .controle-horas-container .horas-voo {
+    font-size: 12px;
+    }
+
+    .controle-horas-container .detalhes-grid {
+    grid-template-columns: 1fr;
+    }
+
+    .controle-horas-container .modal-content {
+    width: 95%;
+    margin: 20px;
+    }
+    }
+
+    @media (max-width: 480px) {
+    .controle-horas-container .dia-celula {
+    height: 120px;
+    min-height: 120px;
+    max-height: 120px;
+    }
+
+    .controle-horas-container .dia-conteudo {
+    padding: 4px;
+    }
+
+    .controle-horas-container .dia-rodape {
+    bottom: 3px;
+    }
+
+    .controle-horas-container .dia-numero {
+    font-size: 12px;
+    }
+
+    .controle-horas-container .voo-info {
+    gap: 1px;
+    font-size: 9px;
+    }
+
+    .controle-horas-container .btn-acao {
+    padding: 3px 4px;
+    font-size: 10px;
+    min-width: 20px;
+    height: 20px;
+    }
+
+    .controle-horas-container .resumo-stats {
+    flex-direction: column;
+    gap: 10px;
+    }
+
+    .controle-horas-container .stat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    }
+
+    .controle-horas-container .stat-numero {
+    font-size: 16px;
+    }
+    }
+
+    /* Container de inspeções no calendário */
+    .controle-horas-container .secao-manutencoes {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 20px 0;
+    overflow: hidden;
+    }
+
+    .controle-horas-container .voo-separador-modal {
+    border-top: 2px dashed #dee2e6;
+    margin: 20px 0 16px 0;
+    position: relative;
+    }
+
+    .controle-horas-container .voo-separador-modal::after {
+    content: '✈';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 0 12px;
+    font-size: 16px;
+    color: var(--cor-secundaria);
+    }
+
+    /* Regras .acoes-voo-individual e btn-danger definidas no bloco do modal acima */
+
+    /* Contador de voos no topo do dia */
+    .controle-horas-container .contador-voos {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--cor-secundaria);
+    color: white;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    z-index: 10;
+    }
+
+    /* =================================================================== */
+    /* SISTEMA DE FATURAMENTO - INDICADORES VISUAIS */
+    /* =================================================================== */
+
+    /* Indicador de status individual de faturamento por voo */
+    .controle-horas-container .status-faturamento {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    }
+
+    .controle-horas-container .status-faturado {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+    }
+
+    .controle-horas-container .status-nao-faturado {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Estilos para botões de faturamento no modal */
+    .controle-horas-container .btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+    }
+
+    .controle-horas-container .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .controle-horas-container .btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+    }
+
+    .controle-horas-container .btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+    }
+
+    /* ===================================================================
+    ABA DE AERONAVES
+    =================================================================== */
+
+    .controle-horas-container .aircraft-tab {
+    --aircraft-surface: var(--slds-g-color-surface-1, #fff);
+    --aircraft-surface-muted: var(--slds-g-color-surface-container-2, #f3f3f3);
+    --aircraft-text: var(--slds-g-color-on-surface-2, #2e2e2e);
+    --aircraft-text-strong: var(--slds-g-color-on-surface-3, #03234d);
+    --aircraft-text-muted: var(--slds-g-color-on-surface-1, #5c5c5c);
+    --aircraft-border: var(--slds-g-color-border-1, #c9c9c9);
+    --aircraft-brand: var(--cor-secundaria, #00b3dc);
+    --aircraft-brand-dark: var(--cor-primaria, #003349);
+    color: var(--aircraft-text);
+    }
+
+    .controle-horas-container .aircraft-tab-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--slds-g-spacing-5, 1.5rem);
+    padding: var(--slds-g-spacing-2, 0.5rem) 0 var(--slds-g-spacing-5, 1.5rem);
+    }
+
+    .controle-horas-container .aircraft-tab-heading-copy {
+    max-width: 52rem;
+    }
+
+    .controle-horas-container .aircraft-eyebrow {
+    display: block;
+    margin-bottom: var(--slds-g-spacing-1, 0.25rem);
+    color: var(--aircraft-brand);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    text-transform: uppercase;
+    }
+
+    .controle-horas-container .aircraft-tab-heading h2 {
+    margin: 0;
+    color: var(--aircraft-text-strong);
+    font-size: var(--slds-g-font-scale-4, 1.5rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    }
+
+    .controle-horas-container .aircraft-tab-heading p {
+    margin: var(--slds-g-spacing-2, 0.5rem) 0 0;
+    color: var(--aircraft-text-muted);
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    }
+
+    .controle-horas-container .aircraft-panel {
+    margin-bottom: var(--slds-g-spacing-5, 1.5rem);
+    overflow: hidden;
+    background: var(--aircraft-surface);
+    border: 1px solid var(--aircraft-border);
+    border-radius: var(--slds-g-radius-border-2, 0.5rem);
+    box-shadow: var(--slds-g-shadow-1, 0 2px 4px rgba(0, 0, 0, 0.1));
+    }
+
+    .controle-horas-container .aircraft-panel-enter {
+    animation: fadeIn var(--slds-g-duration-slowly, 0.4s) ease-out;
+    }
+
+    .controle-horas-container .aircraft-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--slds-g-spacing-4, 1rem);
+    padding: var(--slds-g-spacing-4, 1rem) var(--slds-g-spacing-5, 1.5rem);
+    background: var(--aircraft-surface-muted);
+    border-bottom: 1px solid var(--aircraft-border);
+    }
+
+    .controle-horas-container .aircraft-panel-heading h3 {
+    margin: 0;
+    color: var(--aircraft-text-strong);
+    font-size: var(--slds-g-font-scale-2, 1rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    }
+
+    .controle-horas-container .aircraft-panel-heading p {
+    margin: var(--slds-g-spacing-1, 0.25rem) 0 0;
+    color: var(--aircraft-text-muted);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    }
+
+    .controle-horas-container .aircraft-panel-body {
+    padding: var(--slds-g-spacing-5, 1.5rem);
+    }
+
+    .controle-horas-container .aircraft-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--slds-g-spacing-4, 1rem);
+    }
+
+    .controle-horas-container .aircraft-field {
+    min-width: 0;
+    }
+
+    .controle-horas-container .aircraft-field .form-group {
+    margin-bottom: 0;
+    }
+
+    .controle-horas-container .aircraft-field .form-control,
+    .controle-horas-container .aircraft-field .form-select {
+    min-height: 2.5rem;
+    border-radius: var(--slds-g-radius-border-1, 0.25rem);
+    transition: border-color var(--slds-g-duration-promptly, 0.2s) ease,
+                box-shadow var(--slds-g-duration-promptly, 0.2s) ease;
+    }
+
+    .controle-horas-container .aircraft-field .form-control:focus,
+    .controle-horas-container .aircraft-field .form-select:focus {
+    border-color: var(--aircraft-brand);
+    box-shadow: 0 0 0 0.1875rem rgba(0, 179, 220, 0.18);
+    }
+
+    .controle-horas-container .aircraft-tab .form-label {
+    color: var(--aircraft-text-strong);
+    }
+
+    .controle-horas-container .aircraft-tab .form-label.required::after {
+    color: var(--slds-g-color-error-1, #b60554);
+    }
+
+    .controle-horas-container .aircraft-form-section + .aircraft-form-section {
+    margin-top: var(--slds-g-spacing-5, 1.5rem);
+    padding-top: var(--slds-g-spacing-5, 1.5rem);
+    border-top: 1px solid var(--aircraft-border);
+    }
+
+    .controle-horas-container .aircraft-section-heading {
+    margin-bottom: var(--slds-g-spacing-4, 1rem);
+    }
+
+    .controle-horas-container .aircraft-section-heading h4 {
+    margin: 0;
+    color: var(--aircraft-text-strong);
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    }
+
+    .controle-horas-container .aircraft-section-heading p {
+    margin: var(--slds-g-spacing-1, 0.25rem) 0 0;
+    color: var(--aircraft-text-muted);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    }
+
+    .controle-horas-container .aircraft-form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--slds-g-spacing-4, 1rem);
+    }
+
+    .controle-horas-container .aircraft-form-grid--fleet {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .controle-horas-container .aircraft-toggle-control {
+    display: flex;
+    align-items: center;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    min-height: 2.5rem;
+    cursor: pointer;
+    }
+
+    .controle-horas-container .aircraft-toggle {
+    /* Dimensoes fixas preservam o padrao visual da ApontamentoPage. */
+    position: relative;
+    flex: 0 0 3rem;
+    width: 3rem;
+    height: 1.625rem;
+    }
+
+    .controle-horas-container .aircraft-toggle input[type="checkbox"] {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    }
+
+    .controle-horas-container .aircraft-toggle-slider {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: var(--aircraft-border);
+    border-radius: var(--slds-g-radius-border-pill, 15rem);
+    transition: background-color var(--slds-g-duration-promptly, 0.2s) ease;
+    pointer-events: none;
+    }
+
+    .controle-horas-container .aircraft-toggle-slider::before {
+    content: "";
+    position: absolute;
+    bottom: 0.1875rem;
+    left: 0.1875rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    background: var(--aircraft-surface);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+    box-shadow: var(--slds-g-shadow-1, 0 2px 4px rgba(0, 0, 0, 0.15));
+    transition: transform var(--slds-g-duration-promptly, 0.2s) ease;
+    }
+
+    .controle-horas-container .aircraft-toggle input[type="checkbox"]:checked + .aircraft-toggle-slider {
+    background: var(--aircraft-brand);
+    }
+
+    .controle-horas-container .aircraft-toggle input[type="checkbox"]:checked + .aircraft-toggle-slider::before {
+    transform: translateX(1.375rem);
+    }
+
+    .controle-horas-container .aircraft-toggle input[type="checkbox"]:focus-visible + .aircraft-toggle-slider {
+    outline: 0.1875rem solid rgba(0, 179, 220, 0.35);
+    outline-offset: 0.125rem;
+    }
+
+    .controle-horas-container .aircraft-toggle-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    }
+
+    .controle-horas-container .aircraft-toggle-copy strong {
+    color: var(--aircraft-text);
+    font-size: var(--slds-g-font-scale-1, 0.875rem);
+    }
+
+    .controle-horas-container .aircraft-toggle-copy small {
+    margin-top: var(--slds-g-spacing-1, 0.25rem);
+    color: var(--aircraft-text-muted);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    }
+
+    .controle-horas-container .aircraft-tab .form-actions {
+    margin-top: var(--slds-g-spacing-5, 1.5rem);
+    padding-top: var(--slds-g-spacing-4, 1rem);
+    border-color: var(--aircraft-border);
+    }
+
+    .controle-horas-container .aircraft-tab .btn {
+    min-height: 2.5rem;
+    padding: 0 var(--slds-g-spacing-4, 1rem);
+    border: 1px solid transparent;
+    border-radius: var(--slds-g-radius-border-1, 0.25rem);
+    box-sizing: border-box;
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    line-height: 2.375rem;
+    transition: background-color var(--slds-g-duration-promptly, 0.2s) ease,
+                border-color var(--slds-g-duration-promptly, 0.2s) ease,
+                box-shadow var(--slds-g-duration-promptly, 0.2s) ease,
+                transform var(--slds-g-duration-quickly, 0.1s) ease;
+    }
+
+    .controle-horas-container .aircraft-tab .btn:hover {
+    transform: translateY(-0.0625rem);
+    box-shadow: var(--slds-g-shadow-1, 0 2px 4px rgba(0, 0, 0, 0.12));
+    }
+
+    .controle-horas-container .aircraft-tab .btn:focus-visible {
+    outline: 0.1875rem solid rgba(0, 179, 220, 0.35);
+    outline-offset: 0.125rem;
+    }
+
+    .controle-horas-container .aircraft-tab .btn-primary {
+    background: var(--aircraft-brand);
+    color: var(--slds-g-color-on-accent-1, #fff);
+    }
+
+    .controle-horas-container .aircraft-tab .btn-primary:hover {
+    background: var(--aircraft-brand-dark);
+    }
+
+    .controle-horas-container .aircraft-tab .btn-outline-primary {
+    background: var(--aircraft-surface);
+    border-color: var(--aircraft-brand);
+    color: var(--aircraft-brand-dark);
+    }
+
+    .controle-horas-container .aircraft-tab .btn-outline-primary:hover {
+    background: var(--aircraft-surface-muted);
+    color: var(--aircraft-brand-dark);
+    }
+
+    .controle-horas-container .aircraft-btn-danger {
+    background: var(--aircraft-surface);
+    border-color: var(--slds-g-color-border-error-1, #b60554) !important;
+    color: var(--slds-g-color-error-1, #b60554);
+    }
+
+    .controle-horas-container .aircraft-btn-danger:hover {
+    background: var(--slds-g-color-error-container-1, #fddde3);
+    }
+
+    .controle-horas-container .aircraft-btn-success {
+    background: var(--aircraft-surface);
+    border-color: var(--slds-g-color-border-success-1, #056764) !important;
+    color: var(--slds-g-color-success-1, #056764);
+    }
+
+    .controle-horas-container .aircraft-btn-success:hover {
+    background: var(--slds-g-color-success-container-1, #acf3e4);
+    }
+
+    .controle-horas-container .aircraft-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 1.5rem;
+    padding: 0 var(--slds-g-spacing-2, 0.5rem);
+    background: var(--aircraft-surface);
+    border: 1px solid var(--aircraft-border);
+    border-radius: var(--slds-g-radius-border-pill, 15rem);
+    color: var(--aircraft-text-strong);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    }
+
+    .controle-horas-container .aircraft-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    }
+
+    .controle-horas-container .aircraft-table {
+    width: 100%;
+    min-width: 50rem;
+    border-collapse: collapse;
+    font-size: var(--slds-g-font-size-base, 0.8125rem);
+    }
+
+    .controle-horas-container .aircraft-table th {
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+    background: var(--aircraft-surface-muted);
+    border-bottom: 1px solid var(--aircraft-border);
+    color: var(--aircraft-text-strong);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    text-align: left;
+    }
+
+    .controle-horas-container .aircraft-table td {
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+    border-bottom: 1px solid var(--aircraft-border);
+    color: var(--aircraft-text);
+    vertical-align: middle;
+    }
+
+    .controle-horas-container .aircraft-table tbody tr {
+    transition: background-color var(--slds-g-duration-promptly, 0.2s) ease;
+    }
+
+    .controle-horas-container .aircraft-table tbody tr:hover {
+    background: var(--aircraft-surface-muted);
+    }
+
+    .controle-horas-container .aircraft-table tbody tr:last-child td {
+    border-bottom: 0;
+    }
+
+    .controle-horas-container .aircraft-registration {
+    color: var(--aircraft-text-strong);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    }
+
+    .controle-horas-container .aircraft-badge,
+    .controle-horas-container .aircraft-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0 var(--slds-g-spacing-2, 0.5rem);
+    border-radius: var(--slds-g-radius-border-pill, 15rem);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    }
+
+    .controle-horas-container .aircraft-badge {
+    background: var(--aircraft-surface-muted);
+    border: 1px solid var(--aircraft-border);
+    color: var(--aircraft-text);
+    }
+
+    .controle-horas-container .aircraft-status::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: var(--slds-g-spacing-2, 0.5rem);
+    border-radius: var(--slds-g-radius-border-circle, 100%);
+    background: currentColor;
+    }
+
+    .controle-horas-container .aircraft-status--active {
+    background: var(--slds-g-color-success-container-1, #acf3e4);
+    color: var(--slds-g-color-success-1, #056764);
+    }
+
+    .controle-horas-container .aircraft-status--inactive {
+    background: var(--aircraft-surface-muted);
+    border: 1px solid var(--aircraft-border);
+    color: var(--aircraft-text-muted);
+    }
+
+    .controle-horas-container .aircraft-row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--slds-g-spacing-2, 0.5rem);
+    }
+
+    .controle-horas-container .aircraft-row-actions .btn {
+    width: auto;
+    min-height: 2rem;
+    padding: 0 var(--slds-g-spacing-3, 0.75rem);
+    line-height: 1.875rem;
+    white-space: nowrap;
+    }
+
+    .controle-horas-container .aircraft-list-panel .empty-state {
+    padding: var(--slds-g-spacing-6, 2rem);
+    }
+
+    @media (max-width: 68.75rem) {
+    .controle-horas-container .aircraft-form-grid,
+    .controle-horas-container .aircraft-form-grid--fleet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    }
+
+    @media (max-width: 48rem) {
+    .controle-horas-container .aircraft-tab-heading {
+    align-items: stretch;
+    flex-direction: column;
+    }
+
+    .controle-horas-container .aircraft-tab-heading .btn,
+    .controle-horas-container .aircraft-filter-actions .btn {
+    width: 100%;
+    }
+
+    .controle-horas-container .aircraft-filter-grid {
+    grid-template-columns: 1fr;
+    }
+
+    .controle-horas-container .aircraft-panel-heading,
+    .controle-horas-container .aircraft-panel-body {
+    padding: var(--slds-g-spacing-4, 1rem);
+    }
+
+    .controle-horas-container .aircraft-form-grid,
+    .controle-horas-container .aircraft-form-grid--fleet {
+    grid-template-columns: 1fr;
+    }
+
+    .controle-horas-container .aircraft-tab .form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+    }
+
+    .controle-horas-container .aircraft-table {
+    min-width: 0;
+    }
+
+    .controle-horas-container .aircraft-table thead {
+    display: none;
+    }
+
+    .controle-horas-container .aircraft-table,
+    .controle-horas-container .aircraft-table tbody,
+    .controle-horas-container .aircraft-table tr,
+    .controle-horas-container .aircraft-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    }
+
+    .controle-horas-container .aircraft-table tr {
+    padding: var(--slds-g-spacing-3, 0.75rem) var(--slds-g-spacing-4, 1rem);
+    border-bottom: 1px solid var(--aircraft-border);
+    }
+
+    .controle-horas-container .aircraft-table tbody tr:last-child {
+    border-bottom: 0;
+    }
+
+    .controle-horas-container .aircraft-table td {
+    display: grid;
+    grid-template-columns: minmax(7rem, 40%) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--slds-g-spacing-3, 0.75rem);
+    padding: var(--slds-g-spacing-2, 0.5rem) 0;
+    border: 0;
+    text-align: right;
+    }
+
+    .controle-horas-container .aircraft-table td::before {
+    content: attr(data-label);
+    color: var(--aircraft-text-muted);
+    font-size: var(--slds-g-font-scale-neg-1, 0.75rem);
+    font-weight: var(--slds-g-font-weight-7, 700);
+    text-align: left;
+    }
+
+    .controle-horas-container .aircraft-table .aircraft-cell-actions {
+    display: block;
+    padding-top: var(--slds-g-spacing-3, 0.75rem);
+    }
+
+    .controle-horas-container .aircraft-table .aircraft-cell-actions::before {
+    display: none;
+    }
+
+    .controle-horas-container .aircraft-row-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    }
+
+    .controle-horas-container .aircraft-row-actions .btn {
+    width: 100%;
+    }
+    }
+
+/* Shared interaction and status layer */
+.controle-horas-container {
+    --chv-surface: #ffffff;
+    --chv-surface-muted: #f5f7f9;
+    --chv-text: #2e2e2e;
+    --chv-text-muted: #5c5c5c;
+    --chv-border: #c9c9c9;
+    --chv-brand: #007f9d;
+    --chv-brand-strong: #003349;
+    --chv-success: #2e844a;
+    --chv-warning: #a96404;
+    --chv-danger: #ba0517;
+    --chv-focus: #0176d3;
+}
+
+.controle-horas-container .header-section {
+    background: var(--chv-brand-strong);
+    border-left: 4px solid #00b3dc;
+    box-shadow: none;
+    text-align: left;
+}
+
+.controle-horas-container .tabs-nav {
+    background: var(--chv-surface);
+    box-shadow: none;
+}
+
+.controle-horas-container .tab-button.action-primary {
+    background: var(--chv-success);
+    box-shadow: none;
+}
+
+.controle-horas-container .btn,
+.controle-horas-container .tab-button,
+.controle-horas-container .btn-sincronizar-ghost,
+.controle-horas-container .aircraft-button {
+    min-height: 2.5rem;
+    border-radius: 4px;
+    transition: background-color 160ms ease, border-color 160ms ease,
+                color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.controle-horas-container button:focus-visible,
+.controle-horas-container input[type="button"]:focus-visible,
+.controle-horas-container input[type="submit"]:focus-visible,
+.controle-horas-container [role="tab"]:focus-visible,
+.controle-horas-container a:focus-visible,
+.controle-horas-container input:focus-visible,
+.controle-horas-container select:focus-visible,
+.controle-horas-container textarea:focus-visible {
+    outline: 3px solid rgba(1, 118, 211, 0.35);
+    outline-offset: 2px;
+}
+
+.controle-horas-container [role="tabpanel"][aria-hidden="true"] {
+    display: none;
+}
+
+.controle-horas-container .modal-content[role="dialog"]:focus {
+    outline: none;
+}
+
+.controle-horas-container .status-vencida .horas-restantes-valor,
+.controle-horas-container .status-vencida .dias-restantes-valor,
+.controle-horas-container .status-vencida .inspecao-restante .valor {
+    color: var(--chv-danger);
+}
+
+.controle-horas-container .status-proxima .horas-restantes-valor,
+.controle-horas-container .status-proxima .dias-restantes-valor,
+.controle-horas-container .status-proxima .inspecao-restante .valor,
+.controle-horas-container .status-alerta .horas-restantes-valor,
+.controle-horas-container .status-alerta .dias-restantes-valor,
+.controle-horas-container .status-alerta .inspecao-restante .valor {
+    color: var(--chv-warning);
+}
+
+.controle-horas-container .status-em-dia .horas-restantes-valor,
+.controle-horas-container .status-em-dia .dias-restantes-valor,
+.controle-horas-container .status-em-dia .inspecao-restante .valor {
+    color: var(--chv-success);
+}
+
+.controle-horas-container [hidden] {
+    display: none !important;
+}
+
+@media (max-width: 767px) {
+    .controle-horas-container .header-section {
+        padding: 1rem;
+    }
+
+    .controle-horas-container .tabs-nav {
+        align-items: stretch;
+    }
+
+    .controle-horas-container .tab-button.action-primary,
+    .controle-horas-container .tab-button {
+        min-width: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .controle-horas-container *,
+    .controle-horas-container *::before,
+    .controle-horas-container *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+    }
+}
