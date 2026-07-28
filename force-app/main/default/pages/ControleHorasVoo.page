@@ -328,10 +328,11 @@
                                                                 </apex:outputPanel>
 
                                                                 <apex:commandLink action="{!abrirCalendarioDashboard}"
-                                                                                  styleClass="btn btn-secondary flight-dashboard-action"
+                                                                                  styleClass="btn btn-primary flight-dashboard-action"
                                                                                   reRender="pageMessagesPanel,filtroPanel,calendarioPanel,manutencaoPanel"
                                                                                   status="loadingStatus"
                                                                                   oncomplete="onTabChange();">
+                                                                    <span class="flight-dashboard-action-icon" aria-hidden="true"></span>
                                                                     Ver calendário
                                                                     <apex:param name="aeronaveDashboardId" value="{!dashboardItem.aeronaveId}"/>
                                                                 </apex:commandLink>
