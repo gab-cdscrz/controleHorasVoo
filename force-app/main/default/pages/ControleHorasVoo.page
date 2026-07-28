@@ -1,6 +1,7 @@
 <apex:page controller="ControleHorasVooController" showHeader="false" sidebar="false" cache="false" docType="html-5.0">
     <!-- Página de Controle de Horas de Voo - Cálculos realizados no frontend -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <apex:includeScript value="{!URLFOR($Resource.ChartJs, 'chart.min.js')}"/>
     <apex:includeScript value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas.js')}"/>
     <apex:stylesheet value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas.css')}"/>
     
@@ -136,7 +137,8 @@
                                                                         action="{!aplicarFiltrosCalendario}" 
                                                                         styleClass="btn btn-primary"
                                                                         reRender="pageMessagesPanel,filtroPanel,calendarioPanel,manutencaoPanel"
-                                                                        status="loadingStatus"/>
+                                                                        status="loadingStatus"
+                                                                        oncomplete="onTabChange();"/>
                                                 </div>
                                             </div>
                                         </div>
@@ -261,13 +263,105 @@
                                             
                                         </apex:outputPanel>
                                         
-                                        <!-- Estado Vazio/Inicial -->
-                                        <apex:outputPanel rendered="{!OR(diasCalendario.size == 0, ISBLANK(filtroAeronaveIdCalendario))}">
-                                            <div class="empty-state">
-                                                <div class="empty-state-icon">📅</div>
-                                                <h3>Selecione uma aeronave para visualizar o calendário</h3>
-                                                <p>Escolha uma aeronave nos filtros acima para ver o calendário de voos do mês.</p>
-                                            </div>
+                                        <!-- Dashboard inicial da frota -->
+                                        <apex:outputPanel rendered="{!ISBLANK(filtroAeronaveIdCalendario)}">
+                                            <section class="flight-dashboard" aria-labelledby="flightDashboardTitle">
+                                                <header class="flight-dashboard-header">
+                                                    <div>
+                                                        <span class="flight-dashboard-eyebrow">Visão geral da frota</span>
+                                                        <h2 id="flightDashboardTitle">Distribuição das horas de voo</h2>
+                                                        <p>{!periodoDashboard}</p>
+                                                    </div>
+                                                    <div class="flight-dashboard-summary" aria-label="Resumo do período">
+                                                        <div>
+                                                            <strong>{!totalVoosDashboard}</strong>
+                                                            <span>voos</span>
+                                                        </div>
+                                                        <div>
+                                                            <strong>
+                                                                <apex:outputText value="{0, number, #,##0.0}">
+                                                                    <apex:param value="{!totalHorasDashboard}"/>
+                                                                </apex:outputText>
+                                                            </strong>
+                                                            <span>horas</span>
+                                                        </div>
+                                                    </div>
+                                                </header>
+
+                                                <apex:outputPanel rendered="{!temDashboardAeronaves}">
+                                                    <div class="flight-dashboard-grid">
+                                                        <apex:repeat value="{!dashboardAeronaves}" var="dashboardItem">
+                                                            <article class="flight-dashboard-card">
+                                                                <div class="flight-dashboard-card-header">
+                                                                    <h3>{!dashboardItem.nome}</h3>
+                                                                    <span>{!dashboardItem.totalVoos} voos</span>
+                                                                </div>
+
+                                                                <div class="flight-dashboard-chart-wrap {!IF(dashboardItem.temVoos, '', 'is-empty')}">
+                                                                    <canvas class="flight-dashboard-chart"
+                                                                            role="img"
+                                                                            aria-label="Distribuição das horas de voo da aeronave {!dashboardItem.nome}">
+                                                                    </canvas>
+                                                                    <div class="flight-dashboard-chart-data" hidden="hidden">
+                                                                        <apex:repeat value="{!dashboardItem.metricas}" var="metrica">
+                                                                            <span data-flight-code="{!metrica.codigo}"
+                                                                                  data-flight-label="{!metrica.nome}"
+                                                                                  data-flight-color="{!metrica.cor}"
+                                                                                  data-flight-hours="{!metrica.horasData}">
+                                                                            </span>
+                                                                        </apex:repeat>
+                                                                    </div>
+                                                                    <div class="flight-dashboard-chart-total" aria-hidden="true">
+                                                                        <strong>
+                                                                            <apex:outputText value="{0, number, #,##0.0}">
+                                                                                <apex:param value="{!dashboardItem.totalHoras}"/>
+                                                                            </apex:outputText>
+                                                                        </strong>
+                                                                        <span>horas</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <apex:outputPanel rendered="{!!dashboardItem.temVoos}"
+                                                                                  layout="block"
+                                                                                  styleClass="flight-dashboard-no-data">
+                                                                    Sem voos no período
+                                                                </apex:outputPanel>
+
+                                                                <apex:commandLink action="{!abrirCalendarioDashboard}"
+                                                                                  styleClass="btn btn-secondary flight-dashboard-action"
+                                                                                  reRender="pageMessagesPanel,filtroPanel,calendarioPanel,manutencaoPanel"
+                                                                                  status="loadingStatus"
+                                                                                  oncomplete="onTabChange();">
+                                                                    Ver calendário
+                                                                    <apex:param name="aeronaveDashboardId" value="{!dashboardItem.aeronaveId}"/>
+                                                                </apex:commandLink>
+                                                            </article>
+                                                        </apex:repeat>
+                                                    </div>
+
+                                                    <footer class="flight-dashboard-legend" aria-label="Legenda dos tipos de voo">
+                                                        <span class="flight-dashboard-legend-title">Tipos de voo</span>
+                                                        <ul>
+                                                            <apex:repeat value="{!legendaTiposVoo}" var="tipoVoo">
+                                                                <li>
+                                                                    <span class="flight-dashboard-swatch"
+                                                                          style="background-color: {!tipoVoo.cor};"
+                                                                          aria-hidden="true"></span>
+                                                                    <strong>{!tipoVoo.codigo}</strong>
+                                                                    <span>{!tipoVoo.nome}</span>
+                                                                </li>
+                                                            </apex:repeat>
+                                                        </ul>
+                                                    </footer>
+                                                </apex:outputPanel>
+
+                                                <apex:outputPanel rendered="{!!temDashboardAeronaves}">
+                                                    <div class="empty-state">
+                                                        <h3>Nenhuma aeronave ativa</h3>
+                                                        <p>Cadastre ou ative uma aeronave para visualizar o resumo mensal.</p>
+                                                    </div>
+                                                </apex:outputPanel>
+                                            </section>
                                         </apex:outputPanel>
                                     </apex:outputPanel>
                                     

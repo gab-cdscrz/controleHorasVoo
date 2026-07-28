@@ -126,6 +126,22 @@ public without sharing class ControleHorasVooController {
     public List<Controle_Horas_Voo__c> controlesDetalhes { get; set; }
     public String diaSelecionado { get; set; }
     public String nomeDiaSemana { get; set; }
+    public List<ControleHorasVooDashboardService.AircraftSummary> dashboardAeronaves { get; set; }
+    public Decimal totalHorasDashboard { get; set; }
+    public Integer totalVoosDashboard { get; set; }
+    public String periodoDashboard { get; set; }
+
+    public Boolean temDashboardAeronaves {
+        get { return dashboardAeronaves != null && !dashboardAeronaves.isEmpty(); }
+        set;
+    }
+
+    /**
+     * Returns the canonical flight types used by the calendar and charts.
+     */
+    public List<ControleHorasVooDashboardService.FlightTypeDefinition> getLegendaTiposVoo() {
+        return ControleHorasVooDashboardService.getFlightTypes();
+    }
     
     // Classe wrapper para dias do calendário
     public class DiaCalendario {
@@ -254,6 +270,11 @@ public without sharing class ControleHorasVooController {
         totalHorasMesCalendario = 0;
         totalCombustivelMes = 0;
         totalValorMesCalendario = 0;
+        dashboardAeronaves =
+            new List<ControleHorasVooDashboardService.AircraftSummary>();
+        totalHorasDashboard = 0;
+        totalVoosDashboard = 0;
+        periodoDashboard = '';
     }
     
     // Método unificado para carregar todas as opções
@@ -580,6 +601,11 @@ public without sharing class ControleHorasVooController {
             }
         } else if (abaAtiva == 'aeronaves') {
             carregarListaAeronaves();
+        } else if (
+            abaAtiva == 'controles' &&
+            String.isBlank(filtroAeronaveIdCalendario)
+        ) {
+            carregarDashboardCalendario();
         }
     }
     
@@ -591,6 +617,7 @@ public without sharing class ControleHorasVooController {
     private void inicializarCalendario() {
         if (String.isBlank(filtroAeronaveIdCalendario)) {
             diasCalendario = new List<DiaCalendario>();
+            carregarDashboardCalendario();
             return;
         }
         carregarCalendario();
@@ -766,13 +793,90 @@ public without sharing class ControleHorasVooController {
     // Aplicar filtros do calendário
     public void aplicarFiltrosCalendario() {
         if (String.isBlank(filtroAeronaveIdCalendario)) {
-            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.WARNING, 'Selecione uma aeronave para visualizar o calendário.'));
             diasCalendario = new List<DiaCalendario>();
+            carregarDashboardCalendario();
             return;
         }
         carregarCalendario();
     }
-    
+
+    /**
+     * Opens the selected aircraft calendar from the fleet dashboard.
+     */
+    public void abrirCalendarioDashboard() {
+        String aircraftIdParameter =
+            ApexPages.currentPage().getParameters().get('aeronaveDashboardId');
+        if (String.isBlank(aircraftIdParameter)) return;
+
+        try {
+            filtroAeronaveIdCalendario = String.valueOf(
+                Id.valueOf(aircraftIdParameter)
+            );
+            carregarCalendario();
+        } catch (Exception exceptionValue) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Não foi possível abrir o calendário da aeronave selecionada.'
+            ));
+        }
+    }
+
+    /**
+     * Loads one monthly distribution per active aircraft using a single
+     * aggregate query. The already-loaded aircraft options are reused.
+     */
+    private void carregarDashboardCalendario() {
+        dashboardAeronaves =
+            new List<ControleHorasVooDashboardService.AircraftSummary>();
+        totalHorasDashboard = 0;
+        totalVoosDashboard = 0;
+
+        try {
+            Integer yearValue = Integer.valueOf(filtroAnoCalendario);
+            Integer monthValue = Integer.valueOf(filtroMesCalendario);
+            Date startDate = Date.newInstance(yearValue, monthValue, 1);
+            Date endDate = startDate.addMonths(1);
+            periodoDashboard = obterNomeMes(monthValue) + ' ' + yearValue;
+
+            if (aeronaveOptionsPrivate == null) {
+                carregarOpcoesAeronave();
+            }
+
+            List<ControleHorasVooDashboardService.AircraftReference>
+                aircraftReferences =
+                    new List<ControleHorasVooDashboardService.AircraftReference>();
+
+            for (SelectOption aircraftOption : aeronaveOptionsPrivate) {
+                if (String.isBlank(aircraftOption.getValue())) {
+                    continue;
+                }
+                aircraftReferences.add(
+                    new ControleHorasVooDashboardService.AircraftReference(
+                        Id.valueOf(aircraftOption.getValue()),
+                        aircraftOption.getLabel()
+                    )
+                );
+            }
+
+            ControleHorasVooDashboardService.DashboardResult dashboardResult =
+                ControleHorasVooDashboardService.build(
+                    aircraftReferences,
+                    startDate,
+                    endDate
+                );
+            dashboardAeronaves = dashboardResult.aircraft;
+            totalHorasDashboard = dashboardResult.totalHours;
+            totalVoosDashboard = dashboardResult.totalFlights;
+        } catch (Exception exceptionValue) {
+            dashboardAeronaves =
+                new List<ControleHorasVooDashboardService.AircraftSummary>();
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Não foi possível carregar o resumo mensal da frota.'
+            ));
+        }
+    }
+
     // Visualizar detalhes do dia
     public void visualizarDia() {
         String diaParam = ApexPages.currentPage().getParameters().get('dia');
@@ -943,6 +1047,8 @@ public without sharing class ControleHorasVooController {
     
     // Carregar dados do calendário
     private void carregarCalendario() {
+        dashboardAeronaves =
+            new List<ControleHorasVooDashboardService.AircraftSummary>();
         if (String.isBlank(filtroAeronaveIdCalendario) || 
             String.isBlank(filtroMesCalendario) || 
             String.isBlank(filtroAnoCalendario)) {
@@ -1081,19 +1187,14 @@ public without sharing class ControleHorasVooController {
     
     // Obter cor do tipo de voo
     public static String obterCorTipo(String tipo) {
-        if (String.isBlank(tipo)) return '#6c757d';
-        
-        switch on tipo {
-            when 'TR' { return '#007bff'; } // Azul para Treinamento
-            when 'SA' { return '#28a745'; } // Verde para Serviço Aéreo
-            when 'EX' { return '#ffc107'; } // Amarelo para Experimental
-            when 'TT' { return '#dc3545'; } // Vermelho para Teste
-            when 'AB' { return '#ff9800'; } // Laranja para Abastecimento
-            when else { return '#6c757d'; } // Cinza para outros
-        }
+        return ControleHorasVooDashboardService.getFlightTypeColor(tipo);
     }
     
     // Obter nome do dia da semana
+    public static String obterNomeTipo(String tipo) {
+        return ControleHorasVooDashboardService.getFlightTypeLabel(tipo);
+    }
+
     private String obterNomeDiaSemana(Date data) {
         Integer diaSemana = obterDiaSemanaNumero(data);
         switch on diaSemana {

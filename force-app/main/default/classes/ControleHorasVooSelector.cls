@@ -2,6 +2,43 @@
  * Read-only queries shared by the flight-control page and its services.
  */
 public without sharing class ControleHorasVooSelector {
+    /**
+     * Returns flight-hour totals grouped by aircraft and flight type.
+     *
+     * @param aircraftIds Aircraft records represented in the dashboard.
+     * @param startDate Inclusive period start.
+     * @param endDate Exclusive period end.
+     * @param flightTypes Flight types included in the distribution.
+     * @return Aggregate rows containing aircraft, type, count and total hours.
+     */
+    public static List<AggregateResult> selectFlightDistribution(
+        Set<Id> aircraftIds,
+        Date startDate,
+        Date endDate,
+        Set<String> flightTypes
+    ) {
+        if (
+            aircraftIds == null || aircraftIds.isEmpty() ||
+            startDate == null || endDate == null || startDate >= endDate ||
+            flightTypes == null || flightTypes.isEmpty()
+        ) {
+            return new List<AggregateResult>();
+        }
+
+        return [
+            SELECT Aeronave__c, Tipo__c,
+                   COUNT(Id) flightCount,
+                   SUM(Horas_Voo__c) totalHours
+            FROM Controle_Horas_Voo__c
+            WHERE Aeronave__c IN :aircraftIds
+              AND Data_do_Voo__c >= :startDate
+              AND Data_do_Voo__c < :endDate
+              AND Tipo__c IN :flightTypes
+            WITH SYSTEM_MODE
+            GROUP BY Aeronave__c, Tipo__c
+        ];
+    }
+
     public static Controle_Horas_Voo__c selectById(Id controleId) {
         return [
             SELECT Id, Name, Data_do_Voo__c,

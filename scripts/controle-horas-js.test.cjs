@@ -30,6 +30,9 @@ const documentStub = {
     },
     querySelectorAll() {
         return [];
+    },
+    contains() {
+        return true;
     }
 };
 const windowStub = {};
@@ -75,6 +78,21 @@ assert.equal(api.calcularCustoTotal('', '10,50'), null);
 assert.equal(api.calcularCustoTotal('-1', '10,50'), null);
 assert.equal(source.includes('MutationObserver'), false);
 assert.equal(source.includes('new Date(dataProximaStr)'), false);
+assert.equal(
+    source.includes("type: 'doughnut'"),
+    true,
+    'The fleet dashboard should initialize doughnut charts.'
+);
+assert.equal(
+    pageSource.includes('$Resource.ChartJs'),
+    true,
+    'The Visualforce page should load the existing ChartJs static resource.'
+);
+assert.equal(
+    pageSource.includes('flight-dashboard-legend'),
+    true,
+    'The dashboard should expose one shared legend after the aircraft charts.'
+);
 assert.ok(
     (pageSource.match(/oncomplete="[^"]*onTabChange\(\)/g) || []).length >= 10,
     'Every form-loading rerender should schedule idempotent initialization.'

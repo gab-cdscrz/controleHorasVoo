@@ -523,6 +523,8 @@ public class ControleHorasVooTest {
         System.assertEquals('#ff9800', ControleHorasVooController.obterCorTipo('AB')); // Abastecimento
         System.assertEquals('#6c757d', ControleHorasVooController.obterCorTipo('XX')); // Outro
         System.assertEquals('#6c757d', ControleHorasVooController.obterCorTipo(null)); // Nulo
+        Assert.areEqual('Translado', ControleHorasVooController.obterNomeTipo('TR'));
+        Assert.areEqual('Tentativa', ControleHorasVooController.obterNomeTipo('TT'));
     }
     
     // Teste de camposHabilitados, camposEditaveis e outras propriedades
@@ -605,7 +607,36 @@ public class ControleHorasVooTest {
     @isTest
     public static void testCalendarioSemAeronave(){
         empregado__c empregadoPiloto = TestDataStatic.empregadoPiloto;
+        Aeronave__c aeronave = TestDataStatic.aeronaveteste;
         setSession(empregadoPiloto.login__c);
+
+        Date referenceDate = baseDate();
+        insert new List<Controle_Horas_Voo__c>{
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aeronave.Id,
+                Data_do_Voo__c = referenceDate,
+                Piloto__c = empregadoPiloto.Id,
+                Tipo__c = 'TR',
+                Horas_Voo__c = 1.5,
+                TOT__c = 1.5
+            ),
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aeronave.Id,
+                Data_do_Voo__c = referenceDate,
+                Piloto__c = empregadoPiloto.Id,
+                Tipo__c = 'TT',
+                Horas_Voo__c = 0.5,
+                TOT__c = 0.5
+            ),
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aeronave.Id,
+                Data_do_Voo__c = referenceDate,
+                Piloto__c = empregadoPiloto.Id,
+                Tipo__c = 'AB',
+                Horas_Voo__c = 0,
+                TOT__c = 0
+            )
+        };
         
         ControleHorasVooController controller = new ControleHorasVooController();
         controller.abaAtiva = 'calendario';
@@ -615,6 +646,52 @@ public class ControleHorasVooTest {
         controller.aplicarFiltrosCalendario();
         
         System.assertEquals(0, controller.diasCalendario.size());
+        Assert.isTrue(
+            controller.temDashboardAeronaves,
+            'The initial calendar should display the fleet dashboard.'
+        );
+        Assert.areEqual(
+            2,
+            controller.totalVoosDashboard,
+            'Refueling-only entries must not be counted as flights.'
+        );
+        Assert.areEqual(
+            Decimal.valueOf('2.0'),
+            controller.totalHorasDashboard,
+            'The dashboard should aggregate flight hours for the selected month.'
+        );
+    }
+
+    @isTest
+    static void dashboardOpensSelectedAircraftCalendar() {
+        empregado__c pilot = TestDataStatic.empregadoPiloto;
+        Aeronave__c aircraft = TestDataStatic.aeronaveteste;
+        setSession(pilot.login__c);
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String, String>{
+                'aeronaveDashboardId' => String.valueOf(aircraft.Id)
+            }
+        );
+
+        Test.startTest();
+        controller.abrirCalendarioDashboard();
+        Test.stopTest();
+
+        Assert.areEqual(
+            String.valueOf(aircraft.Id),
+            controller.filtroAeronaveIdCalendario,
+            'Selecting a dashboard item should update the aircraft filter.'
+        );
+        Assert.areEqual(
+            42,
+            controller.diasCalendario.size(),
+            'Selecting an aircraft should open its monthly calendar.'
+        );
+        Assert.isTrue(
+            controller.dashboardAeronaves.isEmpty(),
+            'The fleet dashboard should be released after opening a calendar.'
+        );
     }
     
     // Teste para DiaCalendario wrapper

@@ -14,6 +14,8 @@
 
     let lastFocusedId = null;
     let initializationFrame = null;
+    let calculatedFlightHours = 0;
+    const dashboardCharts = new Map();
 
     function findField(name) {
         const suffix = FIELD_SUFFIXES[name] || name;
@@ -88,7 +90,7 @@
         if (displayField) displayField.value = '';
         if (totalField) totalField.value = '';
         if (hoursField) hoursField.value = '';
-        ControleHorasVoo.horasDecimais = 0;
+        calculatedFlightHours = 0;
     }
 
     function calculateFlightPreview() {
@@ -120,7 +122,7 @@
             hoursField.value = elapsed.decimalHours.toFixed(1);
             dispatchValueChange(hoursField);
         }
-        ControleHorasVoo.horasDecimais = elapsed.decimalHours;
+        calculatedFlightHours = elapsed.decimalHours;
     }
 
     function parseDecimal(value) {
@@ -153,8 +155,8 @@
         if (averageField) {
             averageField.value = quantity != null
                 && quantity > 0
-                && ControleHorasVoo.horasDecimais > 0
-                ? (quantity / ControleHorasVoo.horasDecimais).toFixed(2)
+                && calculatedFlightHours > 0
+                ? (quantity / calculatedFlightHours).toFixed(2)
                 : '';
         }
     }
@@ -224,6 +226,82 @@
         document.querySelectorAll('.inspecao-card, .inspecao-card-mini').forEach(function (card) {
             const status = card.getAttribute('data-status') || 'SEM DADOS';
             card.setAttribute('aria-label', 'Inspeção com status ' + status.toLowerCase());
+        });
+    }
+
+    function destroyDetachedDashboardCharts() {
+        dashboardCharts.forEach(function (chart, canvas) {
+            if (document.contains(canvas)) return;
+            chart.destroy();
+            dashboardCharts.delete(canvas);
+        });
+    }
+
+    function initializeDashboardCharts() {
+        destroyDetachedDashboardCharts();
+        const canvases = document.querySelectorAll('.flight-dashboard-chart');
+        if (!canvases.length || typeof window.Chart !== 'function') return;
+
+        const reduceMotion = typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        canvases.forEach(function (canvas) {
+            if (dashboardCharts.has(canvas)) return;
+
+            const card = canvas.closest('.flight-dashboard-card');
+            const metricElements = card
+                ? card.querySelectorAll('[data-flight-code]')
+                : [];
+            const metrics = Array.from(metricElements).map(function (element) {
+                return {
+                    label: element.dataset.flightLabel,
+                    color: element.dataset.flightColor,
+                    hours: parseDecimal(element.dataset.flightHours) || 0
+                };
+            });
+            const hasHours = metrics.some(function (metric) {
+                return metric.hours > 0;
+            });
+
+            if (!hasHours) return;
+
+            const chart = new window.Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: metrics.map(function (metric) { return metric.label; }),
+                    datasets: [{
+                        data: metrics.map(function (metric) { return metric.hours; }),
+                        backgroundColor: metrics.map(function (metric) { return metric.color; }),
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverOffset: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    animation: {
+                        duration: reduceMotion ? 0 : 420
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.label + ': '
+                                        + Number(context.raw).toLocaleString('pt-BR', {
+                                            minimumFractionDigits: 1,
+                                            maximumFractionDigits: 1
+                                        })
+                                        + ' h';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            dashboardCharts.set(canvas, chart);
         });
     }
 
@@ -303,6 +381,7 @@
         calculateFuelPreview();
         bindTabKeyboard();
         initializeInspectionCards();
+        initializeDashboardCharts();
         initializeModal();
     }
 
@@ -314,7 +393,12 @@
     }
 
     const ControleHorasVoo = {
-        horasDecimais: 0,
+        get horasDecimais() {
+            return calculatedFlightHours;
+        },
+        set horasDecimais(value) {
+            calculatedFlightHours = value;
+        },
         buscarCampo: findField,
         formatarHorario: function (value) {
             const parsed = parseTime(value);
