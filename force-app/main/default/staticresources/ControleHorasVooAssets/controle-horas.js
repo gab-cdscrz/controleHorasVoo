@@ -425,6 +425,7 @@
         initializeInspectionCards();
         initializeDashboardCharts();
         initializeModal();
+        document.dispatchEvent(new CustomEvent('chv:initialized'));
     }
 
     function scheduleInitialization() {

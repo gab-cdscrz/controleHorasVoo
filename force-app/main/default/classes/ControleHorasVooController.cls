@@ -20,6 +20,10 @@ public without sharing class ControleHorasVooController {
     // Listas para campos de seleção
     public List<SelectOption> pilotoOptions { get; set; }
     public List<SelectOption> operadorOptions { get; set; }
+    public String relatorioAeronaveId { get; set; }
+    public String relatorioPilotoId { get; set; }
+    public String relatorioOperadorId { get; set; }
+    private String relatorioAccessTokenPrivate;
     
     private List<SelectOption> aeronaveOptionsPrivate;
     public List<SelectOption> aeronaveOptions { 
@@ -141,6 +145,37 @@ public without sharing class ControleHorasVooController {
      */
     public List<ControleHorasVooDashboardService.FlightTypeDefinition> getLegendaTiposVoo() {
         return ControleHorasVooDashboardService.getFlightTypes();
+    }
+
+    public List<SelectOption> getRelatorioAeronaveOptions() {
+        return criarOpcoesRelatorio('Todas as aeronaves', aeronaveOptions);
+    }
+
+    public List<SelectOption> getRelatorioPilotoOptions() {
+        return criarOpcoesRelatorio('Todos os pilotos', pilotoOptions);
+    }
+
+    public List<SelectOption> getRelatorioOperadorOptions() {
+        return criarOpcoesRelatorio('Todos os operadores', operadorOptions);
+    }
+
+    public String getRelatorioAccessToken() {
+        if (relatorioAccessTokenPrivate == null) {
+            relatorioAccessTokenPrivate =
+                ControleHorasVooReportController.issueAccessToken();
+        }
+        return relatorioAccessTokenPrivate;
+    }
+
+    @RemoteAction
+    public static ControleHorasVooReportController.Response gerarRelatorioHoras(
+        String accessToken,
+        String requestJson
+    ) {
+        return ControleHorasVooReportController.generate(
+            accessToken,
+            requestJson
+        );
     }
     
     // Classe wrapper para dias do calendário
@@ -294,6 +329,27 @@ public without sharing class ControleHorasVooController {
             options.add(new SelectOption(obj.Id, nome));
         }
         return options;
+    }
+
+    private List<SelectOption> criarOpcoesRelatorio(
+        String allLabel,
+        List<SelectOption> sourceOptions
+    ) {
+        List<SelectOption> reportOptions = new List<SelectOption>{
+            new SelectOption('', allLabel)
+        };
+        if (sourceOptions == null) {
+            return reportOptions;
+        }
+        for (SelectOption sourceOption : sourceOptions) {
+            if (String.isNotBlank(sourceOption.getValue())) {
+                reportOptions.add(new SelectOption(
+                    sourceOption.getValue(),
+                    sourceOption.getLabel()
+                ));
+            }
+        }
+        return reportOptions;
     }
     
     private void carregarOpcoesPiloto() {

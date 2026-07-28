@@ -3,10 +3,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <apex:includeScript value="{!URLFOR($Resource.ChartJs, 'chart.min.js')}"/>
     <apex:includeScript value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas-report.js')}"/>
     <apex:stylesheet value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas.css')}"/>
     
     <apex:composition template="HomePage">
         <apex:define name="content_body">
+            <script>
+                window.controleHorasVooReportLibraryUrl =
+                    '{!JSENCODE($Resource.exceljs)}';
+                window.gerarRelatorioHorasVooRemoto = function (
+                    accessToken,
+                    requestJson,
+                    callback
+                ) {
+                    Visualforce.remoting.Manager.invokeAction(
+                        '{!$RemoteAction.ControleHorasVooController.gerarRelatorioHoras}',
+                        accessToken,
+                        requestJson,
+                        callback,
+                        { escape: true, timeout: 120000 }
+                    );
+                };
+            </script>
             
             <apex:form id="mainForm">
                 <apex:outputPanel id="pageMessagesPanel">
@@ -128,7 +146,7 @@
                                                 <label class="form-label">Ano</label>
                                                 <apex:selectList value="{!filtroAnoCalendario}"
                                                                  size="1"
-                                                                 styleClass="form-select"
+                                                                 styleClass="form-select calendar-year"
                                                                  onchange="ControleHorasVoo.agendarAtualizacaoPeriodo();">
                                                     <apex:selectOptions value="{!anosDisponiveisCalendario}"/>
                                                 </apex:selectList>
@@ -137,7 +155,7 @@
                                                 <label class="form-label">Mês</label>
                                                 <apex:selectList value="{!filtroMesCalendario}"
                                                                  size="1"
-                                                                 styleClass="form-select"
+                                                                 styleClass="form-select calendar-month"
                                                                  onchange="ControleHorasVoo.agendarAtualizacaoPeriodo();">
                                                     <apex:selectOptions value="{!mesesDisponiveis}"/>
                                                 </apex:selectList>
@@ -284,19 +302,27 @@
                                                         <h2 id="flightDashboardTitle">Distribuição das horas de voo</h2>
                                                         <p>{!periodoDashboard}</p>
                                                     </div>
-                                                    <div class="flight-dashboard-summary" aria-label="Resumo do período">
-                                                        <div>
-                                                            <strong>{!totalVoosDashboard}</strong>
-                                                            <span>voos</span>
+                                                    <div class="flight-dashboard-actions">
+                                                        <div class="flight-dashboard-summary" aria-label="Resumo do período">
+                                                            <div>
+                                                                <strong>{!totalVoosDashboard}</strong>
+                                                                <span>voos</span>
+                                                            </div>
+                                                            <div>
+                                                                <strong>
+                                                                    <apex:outputText value="{0, number, #,##0.0}">
+                                                                        <apex:param value="{!totalHorasDashboard}"/>
+                                                                    </apex:outputText>
+                                                                </strong>
+                                                                <span>horas</span>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <strong>
-                                                                <apex:outputText value="{0, number, #,##0.0}">
-                                                                    <apex:param value="{!totalHorasDashboard}"/>
-                                                                </apex:outputText>
-                                                            </strong>
-                                                            <span>horas</span>
-                                                        </div>
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary flight-report-open"
+                                                                title="Exportar relatório de horas">
+                                                            <span class="report-export-icon" aria-hidden="true">↓</span>
+                                                            Exportar
+                                                        </button>
                                                     </div>
                                                 </header>
 
@@ -687,6 +713,12 @@
                                                 <div class="resumo-mensal">
                                                     <div class="resumo-header">
                                                         <h3>Resumo - {!nomeAeronaveAtual} - {!nomeMesAtual}</h3>
+                                                        <button type="button"
+                                                                class="btn btn-outline-primary flight-report-open"
+                                                                title="Exportar relatório de horas">
+                                                            <span class="report-export-icon" aria-hidden="true">↓</span>
+                                                            Exportar
+                                                        </button>
                                                     </div>
                                                     <div class="resumo-stats">
                                                         <div class="stat-item">
@@ -1897,6 +1929,152 @@
 
                             </div> <!-- Fim do tab-content -->
                         </div> <!-- Fim do tabs-container -->
+
+                        <div id="flightReportModal"
+                             class="report-modal-overlay"
+                             hidden="hidden">
+                            <section class="report-modal"
+                                     role="dialog"
+                                     aria-modal="true"
+                                     aria-labelledby="flightReportTitle"
+                                     aria-describedby="flightReportDescription"
+                                     tabindex="-1">
+                                <header class="report-modal-header">
+                                    <div>
+                                        <span class="report-modal-eyebrow">Relatório operacional</span>
+                                        <h2 id="flightReportTitle">Exportar horas de voo</h2>
+                                        <p id="flightReportDescription">
+                                            Gere um arquivo Excel com resumo por responsável, detalhamento e totais.
+                                        </p>
+                                    </div>
+                                    <button type="button"
+                                            class="report-modal-close"
+                                            aria-label="Fechar exportação">
+                                        ×
+                                    </button>
+                                </header>
+
+                                <div class="report-modal-body">
+                                    <input type="hidden"
+                                           class="report-access-token"
+                                           value="{!relatorioAccessToken}"/>
+
+                                    <fieldset class="report-fieldset">
+                                        <legend>Organizar por</legend>
+                                        <div class="report-segmented" role="radiogroup" aria-label="Organizar relatório por">
+                                            <button type="button"
+                                                    class="report-mode-option is-active"
+                                                    data-report-mode="PILOTO"
+                                                    role="radio"
+                                                    aria-checked="true">
+                                                Piloto
+                                            </button>
+                                            <button type="button"
+                                                    class="report-mode-option"
+                                                    data-report-mode="OPERADOR"
+                                                    role="radio"
+                                                    aria-checked="false">
+                                                Operador
+                                            </button>
+                                        </div>
+                                    </fieldset>
+
+                                    <div class="report-filter-grid">
+                                        <div class="report-field">
+                                            <apex:outputLabel value="Aeronave" for="reportAircraft"/>
+                                            <apex:selectList id="reportAircraft"
+                                                             value="{!relatorioAeronaveId}"
+                                                             size="1"
+                                                             styleClass="form-select report-aircraft">
+                                                <apex:selectOptions value="{!relatorioAeronaveOptions}"/>
+                                            </apex:selectList>
+                                        </div>
+                                        <div class="report-field report-responsible-field report-pilot-field">
+                                            <apex:outputLabel value="Piloto" for="reportPilot"/>
+                                            <apex:selectList id="reportPilot"
+                                                             value="{!relatorioPilotoId}"
+                                                             size="1"
+                                                             styleClass="form-select report-pilot">
+                                                <apex:selectOptions value="{!relatorioPilotoOptions}"/>
+                                            </apex:selectList>
+                                        </div>
+                                        <div class="report-field report-responsible-field report-operator-field"
+                                             hidden="hidden">
+                                            <apex:outputLabel value="Operador" for="reportOperator"/>
+                                            <apex:selectList id="reportOperator"
+                                                             value="{!relatorioOperadorId}"
+                                                             size="1"
+                                                             styleClass="form-select report-operator">
+                                                <apex:selectOptions value="{!relatorioOperadorOptions}"/>
+                                            </apex:selectList>
+                                        </div>
+                                        <div class="report-field">
+                                            <label for="reportStartDate">Data inicial</label>
+                                            <input id="reportStartDate"
+                                                   class="form-control report-start-date"
+                                                   type="date"/>
+                                        </div>
+                                        <div class="report-field">
+                                            <label for="reportEndDate">Data final</label>
+                                            <input id="reportEndDate"
+                                                   class="form-control report-end-date"
+                                                   type="date"/>
+                                        </div>
+                                    </div>
+
+                                    <fieldset class="report-fieldset report-flight-types">
+                                        <legend>Tipos de voo</legend>
+                                        <div class="report-type-grid">
+                                            <label class="report-type-control">
+                                                <span class="aircraft-toggle">
+                                                    <input type="checkbox" value="TR" checked="checked"/>
+                                                    <span class="aircraft-toggle-slider"></span>
+                                                </span>
+                                                <span><strong>TR</strong> Translado</span>
+                                            </label>
+                                            <label class="report-type-control">
+                                                <span class="aircraft-toggle">
+                                                    <input type="checkbox" value="SA" checked="checked"/>
+                                                    <span class="aircraft-toggle-slider"></span>
+                                                </span>
+                                                <span><strong>SA</strong> Serviço Aéreo</span>
+                                            </label>
+                                            <label class="report-type-control">
+                                                <span class="aircraft-toggle">
+                                                    <input type="checkbox" value="EX" checked="checked"/>
+                                                    <span class="aircraft-toggle-slider"></span>
+                                                </span>
+                                                <span><strong>EX</strong> Experimental</span>
+                                            </label>
+                                            <label class="report-type-control">
+                                                <span class="aircraft-toggle">
+                                                    <input type="checkbox" value="TT" checked="checked"/>
+                                                    <span class="aircraft-toggle-slider"></span>
+                                                </span>
+                                                <span><strong>TT</strong> Tentativa</span>
+                                            </label>
+                                        </div>
+                                    </fieldset>
+
+                                    <div class="report-feedback"
+                                         role="status"
+                                         aria-live="polite"
+                                         hidden="hidden"></div>
+                                </div>
+
+                                <footer class="report-modal-footer">
+                                    <button type="button"
+                                            class="btn btn-outline-primary report-cancel">
+                                        Cancelar
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-primary report-generate">
+                                        <span class="report-export-icon" aria-hidden="true">↓</span>
+                                        Gerar Excel
+                                    </button>
+                                </footer>
+                            </section>
+                        </div>
                         
                         <!-- Status de carregamento -->
                         <apex:actionStatus id="loadingStatus">
