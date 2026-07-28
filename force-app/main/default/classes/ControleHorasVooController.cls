@@ -4,6 +4,9 @@
 * @date 2025-10-03
 */
 public without sharing class ControleHorasVooController {
+    private static final Set<String> VALID_TABS = new Set<String>{
+        'controles', 'calendario', 'novo', 'manutencao', 'aeronaves'
+    };
     
     // Propriedades para os objetos principais
     public Controle_Horas_Voo__c controleHoras { get; set; }
@@ -180,6 +183,27 @@ public without sharing class ControleHorasVooController {
             }
         }
     }
+
+    public class InspecaoViewModel {
+        public Inspecao_Aeronave__c registro { get; private set; }
+        private InspecaoStatusService.StatusResult calculatedStatus;
+
+        public InspecaoViewModel(
+            Inspecao_Aeronave__c inspectionValue,
+            Decimal aircraftHours
+        ) {
+            registro = inspectionValue;
+            calculatedStatus = InspecaoStatusService.calculate(
+                inspectionValue,
+                aircraftHours
+            );
+        }
+
+        public String status { get { return calculatedStatus.status; } }
+        public String nivelStatus { get { return calculatedStatus.level; } }
+        public Decimal horasRestantes { get { return calculatedStatus.remainingHours; } }
+        public Integer diasRestantes { get { return calculatedStatus.remainingDays; } }
+    }
     
     // Constructor
     public ControleHorasVooController() {
@@ -196,7 +220,8 @@ public without sharing class ControleHorasVooController {
         abastecimentoIdsBackup = new List<Id>();
         aeronave = new Aeronave__c();
         aeronaveManutencao = new Aeronave__c();
-        inspecoesAeronave = new List<Inspecao_Aeronave__c>();
+        inspecoesAeronave = new List<InspecaoViewModel>();
+        inspecoesProximasCalendario = new List<InspecaoViewModel>();
         controleHoras.Data_do_Voo__c = Date.today();
         abaAtiva = 'controles';
 
@@ -260,6 +285,7 @@ public without sharing class ControleHorasVooController {
                 FROM Empregado__c 
                 WHERE isActive__c = true 
                 AND (Funcao__r.Name = 'PILOTO')
+                WITH SYSTEM_MODE
                 ORDER BY Name 
                 LIMIT 100
             ];
@@ -276,6 +302,7 @@ public without sharing class ControleHorasVooController {
                 FROM Empregado__c
                 WHERE isActive__c = true
                 AND Funcao__r.Name LIKE 'OPERADOR DE EQUIP ESPECIAIS%' 
+                WITH SYSTEM_MODE
                 ORDER BY Name
                 LIMIT 100
             ];
@@ -290,9 +317,22 @@ public without sharing class ControleHorasVooController {
         try {
             List<Aeronave__c> aeronaves;
             try {
-                aeronaves = [SELECT Id, Name FROM Aeronave__c WHERE Ativo__c = true ORDER BY Name LIMIT 100];
+                aeronaves = [
+                    SELECT Id, Name
+                    FROM Aeronave__c
+                    WHERE Ativo__c = true
+                    WITH SYSTEM_MODE
+                    ORDER BY Name
+                    LIMIT 100
+                ];
             } catch (Exception e) {
-                aeronaves = [SELECT Id, Name FROM Aeronave__c ORDER BY Name LIMIT 200];
+                aeronaves = [
+                    SELECT Id, Name
+                    FROM Aeronave__c
+                    WITH SYSTEM_MODE
+                    ORDER BY Name
+                    LIMIT 200
+                ];
             }
             
             if (aeronaves.isEmpty()) {
@@ -313,7 +353,7 @@ public without sharing class ControleHorasVooController {
     // Quando uma aeronave é selecionada para visualizar inspeções
     public void selecionarAeronaveManutencao() {
         if (String.isBlank(aeronaveIdManutencao)) {
-            inspecoesAeronave = new List<Inspecao_Aeronave__c>();
+            inspecoesAeronave = new List<InspecaoViewModel>();
             return;
         }
         
@@ -321,7 +361,9 @@ public without sharing class ControleHorasVooController {
             aeronaveManutencao = [
                 SELECT Id, Name, Horas_Totais_de_Voo__c
                 FROM Aeronave__c 
-                WHERE Id = :aeronaveIdManutencao LIMIT 1
+                WHERE Id = :aeronaveIdManutencao
+                WITH SYSTEM_MODE
+                LIMIT 1
             ];
             
             carregarInspecoesAeronave();
@@ -341,7 +383,9 @@ public without sharing class ControleHorasVooController {
             aeronave = [
                 SELECT Id, Name, Horas_Totais_de_Voo__c
                 FROM Aeronave__c 
-                WHERE Id = :aeronaveId LIMIT 1
+                WHERE Id = :aeronaveId
+                WITH SYSTEM_MODE
+                LIMIT 1
             ];
             
             controleHoras.Aeronave__c = aeronaveId;
@@ -356,20 +400,7 @@ public without sharing class ControleHorasVooController {
     private void carregarDadosComplementares() {
         // Carregar dados do controle se já foi salvo
         if (registroSalvo && controleHoras.Id != null) {
-            controleHoras = [
-                SELECT Id, Name, Data_do_Voo__c,
-                Piloto__c, Piloto__r.Name,
-                Operador__c, Operador__r.Name,
-                Aeronave__c, Aeronave__r.Name,
-                Horas_Voo__c, Descricao__c, Tipo__c,
-                ARR__c, DEP__c, Acionamento__c, Corte__c, TOT__c,
-                Notas__c, Obs__c, Faturado__c,
-                Total_Horas_Voo__c,
-                Usuario_Alteracao__c, Usuario_Alteracao__r.Name,
-                Contato_Alteracao__c, Contato_Alteracao__r.Name
-                FROM Controle_Horas_Voo__c
-                WHERE Id = :controleHoras.Id LIMIT 1
-            ];
+            controleHoras = ControleHorasVooSelector.selectById(controleHoras.Id);
         }
         calcularTotaisMes();
         // Dados técnicos agora vêm diretamente do banco
@@ -380,21 +411,11 @@ public without sharing class ControleHorasVooController {
         if (aeronaveId == null) return;
         
         try {
-            Integer mesAtual = Date.today().month();
-            Integer anoAtual = Date.today().year();
-            
-            Decimal totalHorasDB = 0;
-            
-            for (Controle_Horas_Voo__c controle : [
-                SELECT Horas_Voo__c 
-                FROM Controle_Horas_Voo__c 
-                WHERE CALENDAR_MONTH(Data_do_Voo__c) = :mesAtual 
-                AND CALENDAR_YEAR(Data_do_Voo__c) = :anoAtual
-                AND Aeronave__c = :aeronaveId
-                AND Tipo__c != 'AB'
-            ]) {
-                totalHorasDB += (controle.Horas_Voo__c != null ? controle.Horas_Voo__c : 0);
-            }
+            Date referenceDate = controleHoras?.Data_do_Voo__c ?? Date.today();
+            Decimal totalHorasDB = ControleHorasVooSelector.selectMonthlyHours(
+                aeronaveId,
+                referenceDate
+            );
             
             if (!registroSalvo) {
                 totalHorasVooMes = totalHorasDB + (controleHoras.Horas_Voo__c != null ? controleHoras.Horas_Voo__c : 0);
@@ -407,189 +428,78 @@ public without sharing class ControleHorasVooController {
     }
     
     // Método para salvar o controle de horas
-    public PageReference salvarControleHoras() {        
-        if (!validarCamposObrigatorios()) return null;
-        
+    public PageReference salvarControleHoras() {
         try {
-            // Se for somente abastecimento, definir automaticamente o Tipo como "AB"
-            if (somenteAbastecimento) {
-                controleHoras.Tipo__c = 'AB';
-                controleHoras.Horas_Voo__c = 0;
-                controleHoras.TOT__c = 0;
-            }
-            
-            // Capturar as horas do voo antes de salvar
-            Decimal horasVooAtual = controleHoras.Horas_Voo__c ?? 0;
-            
-            // Capturar o ID do usuário logado do sistema de sessão customizado e buscar o Empregado__c
-            String loginUsuario = (String)Session.getValue('idLogin');
-            
-            if (String.isNotBlank(loginUsuario)) {
-                List<Empregado__c> empregados = [
-                    SELECT Id 
-                    FROM Empregado__c 
-                    WHERE Login__c = :loginUsuario 
-                    LIMIT 1
-                ];
-                if (!empregados.isEmpty()) {
-                    controleHoras.Usuario_Alteracao__c = empregados[0].Id;
-                } else {
-                    List<Contact> contatos = [SELECT Id FROM Contact WHERE Login__c = :loginUsuario LIMIT 1];
-                    if (!contatos.isEmpty()) {
-                        controleHoras.Contato_Alteracao__c = contatos[0].Id;
-                    }
-                }
-            }
-            
-            sincronizarCamposCalculados();
-            
-            // LÓGICA DE EDIÇÃO (padrão idBackup — update direto)
-            if (modoEdicao && controleOriginalId != null) {
-                // MODO EDIÇÃO: restaura o Id e executa UPDATE
-                controleHoras.Id = controleOriginalId;
-                // Marcar que este registro foi editado manualmente — protege contra sobrescrita do Planeit
-                controleHoras.Editado_Manualmente__c = true;
-                
-                // 1. Atualizar horas da aeronave pelo diff (novas - originais)
-                if (aeronave?.Id != null) {
-                    Decimal diff = horasVooAtual - (horasOriginaisAeronave ?? 0);
-                    if (diff != 0) {
-                        aeronave.Horas_Totais_de_Voo__c = (aeronave.Horas_Totais_de_Voo__c ?? 0) + diff;
-                        update aeronave;
-                    }
-                }
-                
-                // 2. Atualizar o registro existente
-                update controleHoras;
-                
-                // 3. Salvar/atualizar abastecimentos (suporta múltiplos registros)
-                salvarAbastecimentosEdicao(controleHoras.Id, controleHoras.Data_do_Voo__c);
-                
-                // 4. Mensagem de sucesso
-                ApexPages.addMessage(new ApexPages.Message(
-                    ApexPages.Severity.CONFIRM, 
-                    '✓ Controle atualizado com sucesso!'
-                ));
-                
-                // 5. Manter modoEdicao = true para exibir todos os abastecimentos pós-save
-                
-            } else {
-                // FLUXO NORMAL: novo registro
-                insert controleHoras;
-                
-                // Atualizar horas totais da aeronave (apenas para registros novos)
-                if (aeronave?.Id != null && horasVooAtual > 0) {
-                    aeronave.Horas_Totais_de_Voo__c = (aeronave.Horas_Totais_de_Voo__c ?? 0) + horasVooAtual;
-                    update aeronave;
-                }
-                
-                // Salvar abastecimento se houver dados
-                salvarAbastecimento(controleHoras.Id, controleHoras.Data_do_Voo__c);
-                
-                ApexPages.addMessage(new ApexPages.Message(
-                    ApexPages.Severity.CONFIRM, 
-                    '✓ Controle salvo com sucesso!'
-                ));
-            }
+            atribuirUsuarioAlteracao();
+
+            ControleHorasVooService.SaveRequest request =
+                new ControleHorasVooService.SaveRequest();
+            request.controle = controleHoras;
+            request.controleOriginalId = modoEdicao ? controleOriginalId : null;
+            request.somenteAbastecimento = somenteAbastecimento;
+            request.abastecimentoAtual = abastecimentoAtual;
+            request.abastecimentoOriginalId = abastecimentoOriginalId;
+            request.abastecimentos = abastecimentosEdicao;
+            request.abastecimentoIds = abastecimentoIdsBackup;
+
+            ControleHorasVooService.SaveResult result =
+                ControleHorasVooService.save(request);
+            controleHoras.Id = result.controleId;
+            abastecimentoIdsBackup = new List<Id>();
             
             registroSalvo = true;
-            
-            // CONSOLIDADO: Atualizar tudo em um só lugar
             atualizarDadosAposGravacao();
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.CONFIRM,
+                result.updated
+                    ? 'Controle atualizado com sucesso!'
+                    : 'Controle salvo com sucesso!'
+            ));
             return null;
-            
-        } catch (Exception e) {
-            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao salvar: ' + e.getMessage()));
+        } catch (ControleHorasVooService.ControleHorasVooException exceptionValue) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                exceptionValue.getMessage()
+            ));
             return null;
         }
-    }
-    
-    // Salva ou atualiza o registro de Abastecimento__c vinculado ao voo
-    private void salvarAbastecimento(Id vooId, Date dataVoo) {
-        Boolean temDados = abastecimentoAtual.Quantidade__c != null || abastecimentoAtual.Custo_Unitario__c != null;
-        if (!temDados) return;
-        
-        abastecimentoAtual.Voo__c = vooId;
-        abastecimentoAtual.Data_Voo__c = dataVoo;
-        
-        if (abastecimentoOriginalId != null) {
-            // Padrão idBackup: restaura o Id antes do UPDATE
-            abastecimentoAtual.Id = abastecimentoOriginalId;
-            update abastecimentoAtual;
-            abastecimentoOriginalId = null;
-        } else {
-            insert abastecimentoAtual;
-        }
-    }
-    
-    // Salva múltiplos abastecimentos no modo edição (padrão idBackup para lista)
-    private void salvarAbastecimentosEdicao(Id vooId, Date dataVoo) {
-        if (abastecimentosEdicao == null || abastecimentosEdicao.isEmpty()) {
-            salvarAbastecimento(vooId, dataVoo);
-            return;
-        }
-        List<Abastecimento__c> toUpdate = new List<Abastecimento__c>();
-        List<Abastecimento__c> toInsert = new List<Abastecimento__c>();
-        for (Integer i = 0; i < abastecimentosEdicao.size(); i++) {
-            Abastecimento__c ab = abastecimentosEdicao[i];
-            Boolean temDados = ab.Quantidade__c != null || ab.Custo_Unitario__c != null;
-            if (!temDados) continue;
-            // Recalcular Custo Total antes de salvar
-            if (ab.Quantidade__c != null && ab.Custo_Unitario__c != null) {
-                ab.Custo_Total__c = ab.Quantidade__c * ab.Custo_Unitario__c;
-            }
-            ab.Voo__c = vooId;
-            ab.Data_Voo__c = dataVoo;
-            Id backupId = (abastecimentoIdsBackup != null && i < abastecimentoIdsBackup.size()) ? abastecimentoIdsBackup[i] : null;
-            if (backupId != null) {
-                ab.Id = backupId;
-                // Marcar que este abastecimento foi editado manualmente — protege contra sobrescrita do Planeit
-                ab.Editado_Manualmente__c = true;
-                toUpdate.add(ab);
-            } else {
-                toInsert.add(ab);
-            }
-        }
-        if (!toUpdate.isEmpty()) update toUpdate;
-        if (!toInsert.isEmpty()) insert toInsert;
-        abastecimentoIdsBackup = new List<Id>();
     }
 
-    // Validação de campos obrigatórios
-    private Boolean validarCamposObrigatorios() {
-        List<String> erros = new List<String>();
-        
-        if (controleHoras.Piloto__c == null) {
-            erros.add('O campo Piloto é obrigatório.');
+    private void atribuirUsuarioAlteracao() {
+        String loginUsuario = (String) Session.getValue('idLogin');
+        if (String.isBlank(loginUsuario)) return;
+
+        List<Empregado__c> empregados = [
+            SELECT Id
+            FROM Empregado__c
+            WHERE Login__c = :loginUsuario
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (!empregados.isEmpty()) {
+            controleHoras.Usuario_Alteracao__c = empregados[0].Id;
+            controleHoras.Contato_Alteracao__c = null;
+            return;
         }
-        if (controleHoras.Data_do_Voo__c == null) {
-            erros.add('O campo Data do Voo é obrigatório.');
+
+        List<Contact> contatos = [
+            SELECT Id
+            FROM Contact
+            WHERE Login__c = :loginUsuario
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (!contatos.isEmpty()) {
+            controleHoras.Contato_Alteracao__c = contatos[0].Id;
+            controleHoras.Usuario_Alteracao__c = null;
         }
-        
-        for (String erro : erros) {
-            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, erro));
-        }
-        return erros.isEmpty();
     }
     
     // Atualiza os dados após salvar - MÉTODO CONSOLIDADO ÚNICO
     private void atualizarDadosAposGravacao() {
         // Recarregar os dados do controle com os campos de relacionamento
         if (controleHoras.Id != null) {
-            controleHoras = [
-                SELECT Id, Name, Data_do_Voo__c,
-                Piloto__c, Piloto__r.Name,
-                Operador__c, Operador__r.Name,
-                Aeronave__c, Aeronave__r.Name,
-                Horas_Voo__c, Descricao__c, Tipo__c,
-                ARR__c, DEP__c, Acionamento__c, Corte__c, TOT__c,
-                Notas__c, Obs__c, Faturado__c,
-                Total_Horas_Voo__c,
-                Usuario_Alteracao__c, Usuario_Alteracao__r.Name,
-                Contato_Alteracao__c, Contato_Alteracao__r.Name
-                FROM Controle_Horas_Voo__c 
-                WHERE Id = :controleHoras.Id LIMIT 1
-            ];
+            controleHoras = ControleHorasVooSelector.selectById(controleHoras.Id);
         }
         
         // Recarregar abastecimentos do banco após salvar em modo edição
@@ -600,6 +510,7 @@ public without sharing class ControleHorasVooController {
                        Documento_Referencia__c, Observacoes__c
                 FROM Abastecimento__c
                 WHERE Voo__c = :controleHoras.Id
+                WITH SYSTEM_MODE
                 ORDER BY Id ASC
             ];
         }
@@ -607,18 +518,6 @@ public without sharing class ControleHorasVooController {
         // CONSOLIDADO: Todos os cálculos em um só lugar
         calcularTotaisMes();
         // Dados técnicos vêm do banco, não são calculados
-    }
-    
-    // Método auxiliar para sincronizar campos calculados
-    private void sincronizarCamposCalculados() {
-        if (totField != null) {
-            controleHoras.TOT__c = totField;
-        }
-        if (!registroSalvo) {
-            controleHoras.Total_Horas_Voo__c = totalHorasVooMes + (controleHoras.Horas_Voo__c ?? 0);
-        } else {
-            controleHoras.Total_Horas_Voo__c = totalHorasVooMes;
-        }
     }
     
     // Limpa o formulário
@@ -668,8 +567,12 @@ public without sharing class ControleHorasVooController {
     // MÉTODOS DE INTERFACE
     
     // Troca a aba ativa
+    @SuppressWarnings('PMD.ApexXSSFromURLParam')
     public void trocarAba() {
-        abaAtiva = ApexPages.currentPage().getParameters().get('aba') ?? abaAtiva;
+        String requestedTab = ApexPages.currentPage().getParameters().get('aba');
+        if (VALID_TABS.contains(requestedTab)) {
+            abaAtiva = requestedTab;
+        }
         if (abaAtiva == 'manutencao') {
             // Manter a aeronave selecionada se houver
             if (String.isNotBlank(aeronaveIdManutencao)) {
@@ -727,6 +630,7 @@ public without sharing class ControleHorasVooController {
                 FROM Aeronave__c 
                 WHERE Id = :filtroAeronaveIdCalendario
                 AND Id_Planeit__c != null
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
             
@@ -813,16 +717,16 @@ public without sharing class ControleHorasVooController {
     /**
      * @description Carrega as inspeções da aeronave selecionada
      */
-    public List<Inspecao_Aeronave__c> inspecoesAeronave { get; set; }
-    public List<Inspecao_Aeronave__c> inspecoesProximasCalendario { get; set; }
+    public List<InspecaoViewModel> inspecoesAeronave { get; set; }
+    public List<InspecaoViewModel> inspecoesProximasCalendario { get; set; }
     
     public void carregarInspecoesAeronave() {
         if (String.isBlank(aeronaveIdManutencao)) {
-            inspecoesAeronave = new List<Inspecao_Aeronave__c>();
+            inspecoesAeronave = new List<InspecaoViewModel>();
             return;
         }
         
-        inspecoesAeronave = [
+        List<Inspecao_Aeronave__c> inspections = [
             SELECT Id, Name, Nome_Inspecao__c, Inicio_Horas__c, Data_Proxima__c,
                    Horas_Proxima__c, Data_Execucao__c, Horas_Execucao__c,
                    Responsavel_Execucao__c, Ativa__c,
@@ -831,8 +735,13 @@ public without sharing class ControleHorasVooController {
             FROM Inspecao_Aeronave__c
             WHERE Aeronave__c = :aeronaveIdManutencao
             AND Ativa__c = true
+            WITH SYSTEM_MODE
             ORDER BY Horas_Proxima__c ASC NULLS LAST, Data_Proxima__c ASC NULLS LAST
         ];
+        inspecoesAeronave = wrapInspections(
+            inspections,
+            aeronaveManutencao?.Horas_Totais_de_Voo__c
+        );
     }
     
     /**
@@ -841,6 +750,17 @@ public without sharing class ControleHorasVooController {
     public Boolean temInspecoes {
         get { return inspecoesAeronave != null && !inspecoesAeronave.isEmpty(); }
         set;
+    }
+
+    private static List<InspecaoViewModel> wrapInspections(
+        List<Inspecao_Aeronave__c> inspections,
+        Decimal aircraftHours
+    ) {
+        List<InspecaoViewModel> results = new List<InspecaoViewModel>();
+        for (Inspecao_Aeronave__c inspection : inspections) {
+            results.add(new InspecaoViewModel(inspection, aircraftHours));
+        }
+        return results;
     }
     
     // Aplicar filtros do calendário
@@ -867,25 +787,11 @@ public without sharing class ControleHorasVooController {
             diaSelecionado = String.valueOf(dia);
             nomeDiaSemana = obterNomeDiaSemana(dataVoo);
             
-            // ALTERAÇÃO: Buscar TODOS os controles ATIVOS do dia
-            controlesDetalhes = [
-                SELECT Id, Aeronave__c, Aeronave__r.Name, Data_do_Voo__c, 
-                Piloto__c, Piloto__r.Name, Operador__c, Operador__r.Name,
-                Tipo__c, Descricao__c, DEP__c, ARR__c, 
-                Acionamento__c, Corte__c, TOT__c, Horas_Voo__c,
-                Notas__c, Obs__c, Faturado__c,
-                CreatedDate, Usuario_Alteracao__c, Usuario_Alteracao__r.Name,
-                Contato_Alteracao__c, Contato_Alteracao__r.Name,
-                (SELECT Id, Local__c, Origem_Destino__c, Tipo_Combustivel__c,
-                        Quantidade__c, Unidade__c, Custo_Unitario__c, Custo_Total__c,
-                        Documento_Referencia__c, Faturado__c
-                 FROM Abastecimentos__r
-                 ORDER BY Id_Abastecimento_Planeit__c ASC NULLS LAST)
-                FROM Controle_Horas_Voo__c 
-                WHERE Aeronave__c = :filtroAeronaveIdCalendario 
-                AND Data_do_Voo__c = :dataVoo
-                ORDER BY CreatedDate
-            ];
+            controlesDetalhes =
+                ControleHorasVooSelector.selectDetailsByAircraftAndDate(
+                    filtroAeronaveIdCalendario,
+                    dataVoo
+                );
             
             exibirModal = true;
             
@@ -900,20 +806,9 @@ public without sharing class ControleHorasVooController {
         if (String.isBlank(controleIdParam)) return;
         
         try {
-            // 1. Buscar o registro original completo 
-            Controle_Horas_Voo__c controleOriginal = [
-                SELECT Id, Name, Data_do_Voo__c,
-                       Piloto__c, Piloto__r.Name,
-                       Operador__c, Operador__r.Name,
-                       Aeronave__c, Aeronave__r.Name,
-                       Horas_Voo__c, Descricao__c, Tipo__c,
-                       ARR__c, DEP__c, Acionamento__c, Corte__c, TOT__c,
-                       Notas__c, Obs__c, Faturado__c,
-                       Total_Horas_Voo__c, Id_Voo_Planeit__c
-                FROM Controle_Horas_Voo__c 
-                WHERE Id = :controleIdParam
-                LIMIT 1
-            ];
+            Id controleId = Id.valueOf(controleIdParam);
+            Controle_Horas_Voo__c controleOriginal =
+                ControleHorasVooSelector.selectById(controleId);
             
             // 2. Armazenar Id e horas originais (padrão idBackup — sem delete/insert)
             controleOriginalId = controleOriginal.Id;
@@ -933,6 +828,7 @@ public without sharing class ControleHorasVooController {
                        Documento_Referencia__c, Observacoes__c, Faturado__c
                 FROM Abastecimento__c
                 WHERE Voo__c = :controleOriginalId
+                WITH SYSTEM_MODE
                 ORDER BY Id ASC
             ];
             // Padrão idBackup para múltiplos filhos
@@ -1013,31 +909,15 @@ public without sharing class ControleHorasVooController {
         }
         
         try {
-            // Buscar o registro para obter informações antes de excluir
             Controle_Horas_Voo__c controleParaExcluir = [
-                SELECT Id, Data_do_Voo__c, Aeronave__c, Aeronave__r.Name, Horas_Voo__c
-                FROM Controle_Horas_Voo__c 
+                SELECT Id, Data_do_Voo__c, Aeronave__c, Aeronave__r.Name
+                FROM Controle_Horas_Voo__c
                 WHERE Id = :controleIdParaExcluir
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
-            
-            // Atualizar horas totais da aeronave (subtrair as horas do voo excluído)
-            if (controleParaExcluir.Horas_Voo__c != null && controleParaExcluir.Horas_Voo__c > 0) {
-                Aeronave__c aeronave = [
-                    SELECT Id, Horas_Totais_de_Voo__c
-                    FROM Aeronave__c
-                    WHERE Id = :controleParaExcluir.Aeronave__c
-                    LIMIT 1
-                ];
-                
-                if (aeronave.Horas_Totais_de_Voo__c != null) {
-                    aeronave.Horas_Totais_de_Voo__c -= controleParaExcluir.Horas_Voo__c;
-                    update aeronave;
-                }
-            }
-            
-            // Excluir o registro
-            delete controleParaExcluir;
+
+            ControleHorasVooService.deleteFlight(controleParaExcluir.Id);
             
             // Fechar o modal
             exibirModal = false;
@@ -1053,8 +933,11 @@ public without sharing class ControleHorasVooController {
                 ' da aeronave ' + controleParaExcluir.Aeronave__r.Name + ' excluído com sucesso.'
             ));
             
-        } catch (Exception e) {
-            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao excluir voo: ' + e.getMessage()));
+        } catch (ControleHorasVooService.ControleHorasVooException exceptionValue) {
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                exceptionValue.getMessage()
+            ));
         }
     }
     
@@ -1072,7 +955,13 @@ public without sharing class ControleHorasVooController {
             Integer ano = Integer.valueOf(filtroAnoCalendario);
             
             // Atualizar nome da aeronave atual
-            Aeronave__c aeronaveAtual = [SELECT Name, Horas_Totais_de_Voo__c FROM Aeronave__c WHERE Id = :filtroAeronaveIdCalendario LIMIT 1];
+            Aeronave__c aeronaveAtual = [
+                SELECT Name, Horas_Totais_de_Voo__c
+                FROM Aeronave__c
+                WHERE Id = :filtroAeronaveIdCalendario
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
             nomeAeronaveAtual = aeronaveAtual.Name;
             nomeMesAtual = obterNomeMes(mes) + ' ' + ano;
             horasTotaisAeronaveAtual = aeronaveAtual.Horas_Totais_de_Voo__c;
@@ -1098,6 +987,7 @@ public without sharing class ControleHorasVooController {
                 WHERE Aeronave__c = :filtroAeronaveIdCalendario
                 AND Data_do_Voo__c >= :primeiroDia
                 AND Data_do_Voo__c <= :ultimoDia
+                WITH SYSTEM_MODE
                 ORDER BY Data_do_Voo__c, CreatedDate
             ]) {
                 // Agrupar controles por data
@@ -1275,11 +1165,12 @@ public without sharing class ControleHorasVooController {
                 SELECT Id, Faturado__c 
                 FROM Controle_Horas_Voo__c 
                 WHERE Id = :controleIdParam 
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
             
             controle.Faturado__c = !controle.Faturado__c;
-            update controle;
+            Database.update(controle, AccessLevel.SYSTEM_MODE);
             
             // Recarregar calendário
             carregarCalendario();
@@ -1306,11 +1197,12 @@ public without sharing class ControleHorasVooController {
                 SELECT Id, Faturado__c 
                 FROM Abastecimento__c 
                 WHERE Id = :abastecimentoIdParam 
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
             
             ab.Faturado__c = !ab.Faturado__c;
-            update ab;
+            Database.update(ab, AccessLevel.SYSTEM_MODE);
             
             String mensagem = ab.Faturado__c ? 
                 'Abastecimento marcado como faturado!' : 
@@ -1341,24 +1233,11 @@ public without sharing class ControleHorasVooController {
             Integer ano = Integer.valueOf(filtroAnoCalendario);
             Date dataVoo = Date.newInstance(ano, mes, dia);
 
-            controlesDetalhes = [
-                SELECT Id, Aeronave__c, Aeronave__r.Name, Data_do_Voo__c,
-                       Piloto__c, Piloto__r.Name, Operador__c, Operador__r.Name,
-                       Tipo__c, Descricao__c, DEP__c, ARR__c,
-                       Acionamento__c, Corte__c, TOT__c, Horas_Voo__c,
-                       Notas__c, Obs__c, Faturado__c,
-                       CreatedDate, Usuario_Alteracao__c, Usuario_Alteracao__r.Name,
-                       Contato_Alteracao__c, Contato_Alteracao__r.Name,
-                       (SELECT Id, Local__c, Origem_Destino__c, Tipo_Combustivel__c,
-                               Quantidade__c, Unidade__c, Custo_Unitario__c, Custo_Total__c,
-                               Documento_Referencia__c, Faturado__c
-                        FROM Abastecimentos__r
-                        ORDER BY Id_Abastecimento_Planeit__c ASC NULLS LAST)
-                FROM Controle_Horas_Voo__c
-                WHERE Aeronave__c = :filtroAeronaveIdCalendario
-                AND Data_do_Voo__c = :dataVoo
-                ORDER BY CreatedDate
-            ];
+            controlesDetalhes =
+                ControleHorasVooSelector.selectDetailsByAircraftAndDate(
+                    filtroAeronaveIdCalendario,
+                    dataVoo
+                );
         } catch (Exception e) {
             ApexPages.addMessage(new ApexPages.Message(
                 ApexPages.Severity.ERROR,
@@ -1376,27 +1255,40 @@ public without sharing class ControleHorasVooController {
      */
     public void carregarInspecoesProximasCalendario() {
         if (String.isBlank(filtroAeronaveIdCalendario)) {
-            inspecoesProximasCalendario = new List<Inspecao_Aeronave__c>();
+            inspecoesProximasCalendario = new List<InspecaoViewModel>();
             return;
         }
         
         try {
             // Buscar inspeções ativas da aeronave selecionada no calendário
             // Ordenar por horas e data da próxima inspeção (cálculo de restantes é feito no frontend)
-            inspecoesProximasCalendario = [
+            List<Inspecao_Aeronave__c> inspections = [
                 SELECT Id, Name, Nome_Inspecao__c, 
                        Horas_Proxima__c, Data_Proxima__c, 
                        Horas_Execucao__c, Data_Execucao__c,
-                       Status_Inspecao__c,
+                       Status_Inspecao__c, Ativa__c,
                        Aeronave__r.Horas_Totais_de_Voo__c
                 FROM Inspecao_Aeronave__c
                 WHERE Aeronave__c = :filtroAeronaveIdCalendario
                 AND Ativa__c = true
+                WITH SYSTEM_MODE
                 ORDER BY Horas_Proxima__c ASC NULLS LAST, Data_Proxima__c ASC NULLS LAST
                 LIMIT 6
             ];
+            inspecoesProximasCalendario = wrapInspections(
+                inspections,
+                horasTotaisAeronaveAtual
+            );
         } catch (Exception e) {
-            inspecoesProximasCalendario = new List<Inspecao_Aeronave__c>();
+            inspecoesProximasCalendario = new List<InspecaoViewModel>();
+            System.debug(
+                LoggingLevel.ERROR,
+                'Erro ao carregar próximas inspeções: ' + e.getMessage()
+            );
+            ApexPages.addMessage(new ApexPages.Message(
+                ApexPages.Severity.ERROR,
+                'Não foi possível carregar as próximas inspeções.'
+            ));
         }
     }
 
@@ -1417,8 +1309,10 @@ public without sharing class ControleHorasVooController {
                 'FROM Aeronave__c';
 
             List<String> condicoes = new List<String>();
+            Map<String, Object> binds = new Map<String, Object>();
             if (filtroTipoFrotaAeronaves == 'Propria' || filtroTipoFrotaAeronaves == 'Locada') {
-                condicoes.add('Tipo_Frota__c = \'' + String.escapeSingleQuotes(filtroTipoFrotaAeronaves) + '\'');
+                condicoes.add('Tipo_Frota__c = :tipoFrota');
+                binds.put('tipoFrota', filtroTipoFrotaAeronaves);
             }
             if (filtroStatusAeronaves == 'ativas') {
                 condicoes.add('Ativo__c = true');
@@ -1430,7 +1324,11 @@ public without sharing class ControleHorasVooController {
             }
             query += ' ORDER BY Name LIMIT 500';
 
-            listaAeronaves = Database.query(query);
+            listaAeronaves = Database.queryWithBinds(
+                query,
+                binds,
+                AccessLevel.SYSTEM_MODE
+            );
         } catch (Exception e) {
             ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR, 'Erro ao carregar aeronaves: ' + e.getMessage()));
             listaAeronaves = new List<Aeronave__c>();
@@ -1464,13 +1362,15 @@ public without sharing class ControleHorasVooController {
         if (String.isBlank(aeronaveIdParam)) return;
 
         try {
+            Id aeronaveRegistroId = Id.valueOf(aeronaveIdParam);
             Aeronave__c registro = [
                 SELECT Id, Name, Modelo__c, Fabricante__c, Ano_de_Fabricacao__c,
                        Tipo_Frota__c, Empresa_Locadora__c, Ativo__c,
                        Consumo__c, Consumo_translado__c,
                        Velocidade_media__c, Velocidade_media_translado__c
                 FROM Aeronave__c
-                WHERE Id = :aeronaveIdParam
+                WHERE Id = :aeronaveRegistroId
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
 
@@ -1502,10 +1402,10 @@ public without sharing class ControleHorasVooController {
 
             if (aeronaveFormOriginalId != null) {
                 aeronaveForm.Id = aeronaveFormOriginalId;
-                update aeronaveForm;
+                Database.update(aeronaveForm, AccessLevel.SYSTEM_MODE);
                 ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.CONFIRM, '✓ Aeronave atualizada com sucesso!'));
             } else {
-                insert aeronaveForm;
+                Database.insert(aeronaveForm, AccessLevel.SYSTEM_MODE);
                 ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.CONFIRM, '✓ Aeronave cadastrada com sucesso!'));
             }
 
@@ -1527,9 +1427,15 @@ public without sharing class ControleHorasVooController {
         if (String.isBlank(aeronaveIdParam)) return;
 
         try {
-            Aeronave__c registro = [SELECT Id, Ativo__c FROM Aeronave__c WHERE Id = :aeronaveIdParam LIMIT 1];
+            Aeronave__c registro = [
+                SELECT Id, Ativo__c
+                FROM Aeronave__c
+                WHERE Id = :aeronaveIdParam
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
             registro.Ativo__c = !registro.Ativo__c;
-            update registro;
+            Database.update(registro, AccessLevel.SYSTEM_MODE);
 
             aeronaveOptionsPrivate = null; // invalida cache dos pickers de aeronave
 

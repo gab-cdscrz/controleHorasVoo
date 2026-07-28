@@ -416,7 +416,11 @@ public class ControleHorasVooTest {
         
         // Verificar que as horas foram subtraídas da aeronave
         Aeronave__c aeronaveAtualizada = [SELECT Horas_Totais_de_Voo__c FROM Aeronave__c WHERE Id = :aeronave.Id];
-        System.assertEquals(97.5, aeronaveAtualizada.Horas_Totais_de_Voo__c, 'Horas deveriam ter sido subtraídas');
+        System.assertEquals(
+            0,
+            aeronaveAtualizada.Horas_Totais_de_Voo__c,
+            'O total deve ser recalculado a partir dos voos restantes'
+        );
     }
     
     // Teste de exclusão sem ID (caminho de erro)
@@ -948,5 +952,71 @@ public class ControleHorasVooTest {
         System.assertEquals('aeronaves', controller.abaAtiva);
         System.assertNotEquals(null, controller.listaAeronaves);
         System.assert(controller.listaAeronaves.size() > 0);
+    }
+
+    @isTest
+    public static void testViewModelInspecaoETitulosAeronave() {
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        System.assert(String.isNotBlank(controller.tituloFormularioAeronave));
+
+        Aeronave__c aeronave = TestDataStatic.aeronaveteste;
+        controller.aeronaveFormOriginalId = aeronave.Id;
+        controller.aeronaveForm.Name = aeronave.Name;
+        System.assert(controller.tituloFormularioAeronave.contains(aeronave.Name));
+
+        Inspecao_Aeronave__c inspecao = new Inspecao_Aeronave__c(
+            Ativa__c = true,
+            Horas_Proxima__c = 110,
+            Data_Proxima__c = Date.today().addDays(20)
+        );
+        ControleHorasVooController.InspecaoViewModel viewModel =
+            new ControleHorasVooController.InspecaoViewModel(inspecao, 100);
+
+        System.assertEquals(inspecao, viewModel.registro);
+        System.assert(String.isNotBlank(viewModel.status));
+        System.assert(String.isNotBlank(viewModel.nivelStatus));
+        System.assertEquals(10, viewModel.horasRestantes);
+        System.assertEquals(20, viewModel.diasRestantes);
+    }
+
+    @isTest
+    public static void testCalendarioExibeProximasInspecoes() {
+        Id aeronaveId = TestDataStatic.aeronaveteste.Id;
+        Aeronave__c aeronave = [
+            SELECT Id, Horas_Totais_de_Voo__c
+            FROM Aeronave__c
+            WHERE Id = :aeronaveId
+        ];
+        insert new Inspecao_Aeronave__c(
+            Aeronave__c = aeronave.Id,
+            Chave_Unica__c = 'TESTE_CALENDARIO_100H',
+            Id_Inspecao_Planeit__c = 'TESTE-100',
+            Id_Aeronave_Planeit__c = 'TESTE-AERONAVE',
+            Nome_Inspecao__c = '100hrs',
+            Horas_Proxima__c = (aeronave.Horas_Totais_de_Voo__c ?? 0) + 10,
+            Ativa__c = true
+        );
+
+        ControleHorasVooController controller =
+            newControllerWithPage(new Map<String, String>());
+        controller.filtroAeronaveIdCalendario = aeronave.Id;
+        controller.filtroAnoCalendario = String.valueOf(Date.today().year());
+        controller.filtroMesCalendario = String.valueOf(Date.today().month());
+
+        Test.startTest();
+        controller.aplicarFiltrosCalendario();
+        Test.stopTest();
+
+        System.assertEquals(
+            1,
+            controller.inspecoesProximasCalendario.size(),
+            'A inspeção ativa deve ser exibida no resumo do calendário.'
+        );
+        System.assertEquals(
+            true,
+            controller.inspecoesProximasCalendario[0].registro.Ativa__c,
+            'A consulta deve carregar os campos usados pela calculadora de status.'
+        );
     }
 }
