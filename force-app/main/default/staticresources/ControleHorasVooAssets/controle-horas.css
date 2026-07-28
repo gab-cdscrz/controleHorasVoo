@@ -2735,6 +2735,20 @@
                 color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
+.controle-horas-container .btn-acao {
+    height: 1.5rem;
+    min-height: 1.5rem;
+    box-sizing: border-box;
+    padding: 0 0.375rem;
+    line-height: 1;
+}
+
+.controle-horas-container .btn-adicionar {
+    width: 1.5rem;
+    min-width: 1.5rem;
+    padding: 0;
+}
+
 .controle-horas-container button:focus-visible,
 .controle-horas-container input[type="button"]:focus-visible,
 .controle-horas-container input[type="submit"]:focus-visible,
