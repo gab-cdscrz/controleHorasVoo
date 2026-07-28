@@ -20,6 +20,12 @@
                                      status="loadingStatus">
                     <apex:param name="controleId" assignTo="{!controleIdParaExcluir}" value=""/>
                 </apex:actionFunction>
+
+                <apex:actionFunction name="atualizarPeriodoCalendarioAF"
+                                     action="{!aplicarFiltrosCalendario}"
+                                     reRender="pageMessagesPanel,calendarioPanel,manutencaoPanel"
+                                     status="loadingStatus"
+                                     oncomplete="ControleHorasVoo.finalizarAtualizacaoPeriodo(); onTabChange();"/>
                 
                 <apex:outputPanel id="workspacePanel" layout="block" styleClass="controle-horas-container">
                     <div class="main-container">
@@ -120,13 +126,19 @@
                                             </div>
                                             <div class="filtro-grupo">
                                                 <label class="form-label">Ano</label>
-                                                <apex:selectList value="{!filtroAnoCalendario}" size="1" styleClass="form-select">
+                                                <apex:selectList value="{!filtroAnoCalendario}"
+                                                                 size="1"
+                                                                 styleClass="form-select"
+                                                                 onchange="ControleHorasVoo.agendarAtualizacaoPeriodo();">
                                                     <apex:selectOptions value="{!anosDisponiveisCalendario}"/>
                                                 </apex:selectList>
                                             </div>
                                             <div class="filtro-grupo">
                                                 <label class="form-label">Mês</label>
-                                                <apex:selectList value="{!filtroMesCalendario}" size="1" styleClass="form-select">
+                                                <apex:selectList value="{!filtroMesCalendario}"
+                                                                 size="1"
+                                                                 styleClass="form-select"
+                                                                 onchange="ControleHorasVoo.agendarAtualizacaoPeriodo();">
                                                     <apex:selectOptions value="{!mesesDisponiveis}"/>
                                                 </apex:selectList>
                                             </div>

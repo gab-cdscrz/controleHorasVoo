@@ -16,6 +16,15 @@ const pageSource = fs.readFileSync(
     'utf8'
 );
 const listeners = new Map();
+const timers = new Map();
+let nextTimerId = 1;
+
+function flushTimers() {
+    const pendingTimers = Array.from(timers.values());
+    timers.clear();
+    pendingTimers.forEach((callback) => callback());
+}
+
 const documentStub = {
     activeElement: null,
     readyState: 'loading',
@@ -45,11 +54,20 @@ const context = vm.createContext({
     Set,
     String,
     cancelAnimationFrame() {},
+    clearTimeout(timerId) {
+        timers.delete(timerId);
+    },
     console,
     document: documentStub,
     requestAnimationFrame(callback) {
         callback();
         return 1;
+    },
+    setTimeout(callback) {
+        const timerId = nextTimerId;
+        nextTimerId += 1;
+        timers.set(timerId, callback);
+        return timerId;
     },
     window: windowStub
 });
@@ -76,6 +94,30 @@ assert.equal(overnightDuration.decimalHours, 1.5);
 assert.equal(api.calcularCustoTotal('100', '10,50'), 1050);
 assert.equal(api.calcularCustoTotal('', '10,50'), null);
 assert.equal(api.calcularCustoTotal('-1', '10,50'), null);
+
+let calendarUpdateCalls = 0;
+windowStub.atualizarPeriodoCalendarioAF = () => {
+    calendarUpdateCalls += 1;
+};
+api.agendarAtualizacaoPeriodo();
+api.agendarAtualizacaoPeriodo();
+assert.equal(timers.size, 1, 'Rapid period changes should be debounced.');
+flushTimers();
+assert.equal(calendarUpdateCalls, 1, 'The debounced period change should request one update.');
+
+api.agendarAtualizacaoPeriodo();
+flushTimers();
+assert.equal(
+    calendarUpdateCalls,
+    1,
+    'A second update should wait while the first Ajax request is active.'
+);
+api.finalizarAtualizacaoPeriodo();
+assert.equal(timers.size, 1, 'A pending period change should be rescheduled after Ajax.');
+flushTimers();
+assert.equal(calendarUpdateCalls, 2, 'The latest pending period should be applied.');
+api.finalizarAtualizacaoPeriodo();
+
 assert.equal(source.includes('MutationObserver'), false);
 assert.equal(source.includes('new Date(dataProximaStr)'), false);
 assert.equal(
@@ -92,6 +134,16 @@ assert.equal(
     pageSource.includes('flight-dashboard-legend'),
     true,
     'The dashboard should expose one shared legend after the aircraft charts.'
+);
+assert.equal(
+    pageSource.includes('name="atualizarPeriodoCalendarioAF"'),
+    true,
+    'The page should expose one partial Ajax action for period changes.'
+);
+assert.equal(
+    (pageSource.match(/onchange="ControleHorasVoo\.agendarAtualizacaoPeriodo\(\);"/g) || []).length,
+    2,
+    'Year and month should both schedule the automatic dashboard update.'
 );
 assert.ok(
     (pageSource.match(/oncomplete="[^"]*onTabChange\(\)/g) || []).length >= 10,

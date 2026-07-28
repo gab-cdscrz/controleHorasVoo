@@ -15,7 +15,11 @@
     let lastFocusedId = null;
     let initializationFrame = null;
     let calculatedFlightHours = 0;
+    let calendarPeriodUpdateTimer = null;
+    let calendarPeriodUpdateInFlight = false;
+    let calendarPeriodUpdatePending = false;
     const dashboardCharts = new Map();
+    const CALENDAR_PERIOD_DEBOUNCE_MS = 250;
 
     function findField(name) {
         const suffix = FIELD_SUFFIXES[name] || name;
@@ -28,6 +32,44 @@
     function dispatchValueChange(field) {
         field.dispatchEvent(new Event('input', { bubbles: true }));
         field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function executeCalendarPeriodUpdate() {
+        calendarPeriodUpdateTimer = null;
+        if (calendarPeriodUpdateInFlight) {
+            calendarPeriodUpdatePending = true;
+            return;
+        }
+
+        const updateAction = window.atualizarPeriodoCalendarioAF;
+        if (typeof updateAction !== 'function') return;
+
+        calendarPeriodUpdateInFlight = true;
+        calendarPeriodUpdatePending = false;
+        try {
+            updateAction();
+        } catch (error) {
+            calendarPeriodUpdateInFlight = false;
+            throw error;
+        }
+    }
+
+    function scheduleCalendarPeriodUpdate() {
+        if (calendarPeriodUpdateTimer != null) {
+            clearTimeout(calendarPeriodUpdateTimer);
+        }
+        calendarPeriodUpdateTimer = setTimeout(
+            executeCalendarPeriodUpdate,
+            CALENDAR_PERIOD_DEBOUNCE_MS
+        );
+    }
+
+    function finishCalendarPeriodUpdate() {
+        calendarPeriodUpdateInFlight = false;
+        if (!calendarPeriodUpdatePending) return;
+
+        calendarPeriodUpdatePending = false;
+        scheduleCalendarPeriodUpdate();
     }
 
     function parseTime(value) {
@@ -423,6 +465,8 @@
             calculateFlightPreview();
             calculateFuelPreview();
         },
+        agendarAtualizacaoPeriodo: scheduleCalendarPeriodUpdate,
+        finalizarAtualizacaoPeriodo: finishCalendarPeriodUpdate,
         inicializar: scheduleInitialization,
         reinicializar: scheduleInitialization
     };
