@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Padrão</label>
+    <protected>false</protected>
+    <values>
+        <field>Horas_Alerta__c</field>
+        <value xsi:type="xsd:double">50</value>
+    </values>
+    <values>
+        <field>Horas_Proxima__c</field>
+        <value xsi:type="xsd:double">10</value>
+    </values>
+    <values>
+        <field>Dias_Alerta__c</field>
+        <value xsi:type="xsd:double">90</value>
+    </values>
+    <values>
+        <field>Dias_Proxima__c</field>
+        <value xsi:type="xsd:double">30</value>
+    </values>
+</CustomMetadata>

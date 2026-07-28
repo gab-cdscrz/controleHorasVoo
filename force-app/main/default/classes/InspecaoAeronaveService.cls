@@ -14,6 +14,7 @@
  * 5. Match entre dados da API e Salesforce por Id_Inspecao_Planeit__c
  * 6. Upsert em massa dos registros
  */
+@SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
 public without sharing class InspecaoAeronaveService {
     
     // =========================================================================
@@ -24,6 +25,7 @@ public without sharing class InspecaoAeronaveService {
     private static final String NAMED_CREDENTIAL = 'callout:Planeit_API';
     private static final String LOGIN_ENDPOINT = '/login';
     private static final String INSPECOES_ENDPOINT = '/aeronave/inspecoes';
+    private static final String EXECUCOES_ENDPOINT = '/aeronave/inspecao/execucoes';
     private static final String TOTAIS_ENDPOINT = '/aeronave/totais';
     private static final Integer TIMEOUT_MS = 120000;
     
@@ -83,9 +85,11 @@ public without sharing class InspecaoAeronaveService {
      * Detalhes da última execução de uma inspeção
      */
     public class DetalheExecucaoJSON {
+        public String nomeInspecao;
         public Integer idExecucaoInspecao;
         public Integer idInspecao;
         public Integer idAeronave;
+        public String situacaoInspecao;
         public String dataExecucao;
         public String horasExecucao;
         public String dataProxima;
@@ -95,6 +99,13 @@ public without sharing class InspecaoAeronaveService {
         public String created_at;
         public String updated_at;
         public Integer rn;
+    }
+
+    public class ExecucoesResponse {
+        public Integer codigo;
+        public String mensagem;
+        public String metodo;
+        public List<DetalheExecucaoJSON> data;
     }
     
     /**
@@ -123,6 +134,8 @@ public without sharing class InspecaoAeronaveService {
         public Integer totalInseridos { get; set; }
         public Integer totalAtualizados { get; set; }
         public Integer totalInativos { get; set; }
+        public Integer totalFalhas { get; set; }
+        public Boolean sucessoParcial { get; set; }
         public String aeronaveNome { get; set; }
         
         public ResultadoSincronizacao() {
@@ -130,6 +143,8 @@ public without sharing class InspecaoAeronaveService {
             this.totalInseridos = 0;
             this.totalAtualizados = 0;
             this.totalInativos = 0;
+            this.totalFalhas = 0;
+            this.sucessoParcial = false;
         }
     }
     
@@ -197,6 +212,7 @@ public without sharing class InspecaoAeronaveService {
             SELECT Id, Name, Id_Planeit__c, Horas_Totais_de_Voo__c
             FROM Aeronave__c
             WHERE Id = :aeronaveId
+            WITH SYSTEM_MODE
             LIMIT 1
         ];
         
@@ -250,6 +266,9 @@ public without sharing class InspecaoAeronaveService {
         
         // Map: Id Aeronave SF → Id Planeit
         Map<Id, Decimal> idPlaneitPorAeronave = new Map<Id, Decimal>();
+
+        Map<Id, Map<Integer, DetalheExecucaoJSON>> execucoesPorAeronave =
+            new Map<Id, Map<Integer, DetalheExecucaoJSON>>();
         
         for (Aeronave__c aero : aeronaves) {
             if (aero.Id_Planeit__c == null) {
@@ -263,15 +282,33 @@ public without sharing class InspecaoAeronaveService {
                 List<InspecaoJSON> inspecoes = buscarInspecoesAPI(token, aero.Id_Planeit__c);
                 if (inspecoes != null) {
                     inspecoesPorAeronave.put(aero.Id, inspecoes);
+                } else {
+                    resultado.totalFalhas++;
+                    continue;
+                }
+
+                List<DetalheExecucaoJSON> execucoes =
+                    buscarExecucoesAPI(token, aero.Id_Planeit__c);
+                if (execucoes != null) {
+                    execucoesPorAeronave.put(
+                        aero.Id,
+                        mapearUltimasExecucoes(execucoes)
+                    );
+                } else {
+                    resultado.totalFalhas++;
                 }
                 
                 // Buscar totais (horas totais de voo)
                 TotaisJSON totais = buscarTotaisAPI(token, aero.Id_Planeit__c);
                 if (totais != null && totais.horasVooEtapaDecimalTotal != null) {
                     horasTotaisPorAeronave.put(aero.Id, totais.horasVooEtapaDecimalTotal);
+                } else {
+                    resultado.totalFalhas++;
+                    horasTotaisPorAeronave.put(aero.Id, aero.Horas_Totais_de_Voo__c);
                 }
                 
             } catch (Exception e) {
+                resultado.totalFalhas++;
                 System.debug(LoggingLevel.ERROR, 'Erro ao buscar dados aeronave ' + aero.Name + ': ' + e.getMessage());
             }
         }
@@ -317,6 +354,7 @@ public without sharing class InspecaoAeronaveService {
                 FROM Inspecao_Aeronave__c
                 WHERE Chave_Unica__c IN :todasChavesUnicas
                 AND Ativa__c = true
+                WITH SYSTEM_MODE
             ]) {
                 registrosAtivosPorChave.put(insp.Chave_Unica__c, insp);
             }
@@ -339,6 +377,12 @@ public without sharing class InspecaoAeronaveService {
             List<InspecaoJSON> inspecoes = inspecoesPorAeronave.get(aeronaveId);
             Decimal horasTotais = horasTotaisPorAeronave.get(aeronaveId);
             Decimal idPlaneit = idPlaneitPorAeronave.get(aeronaveId);
+            Boolean execucoesDisponiveis =
+                execucoesPorAeronave.containsKey(aeronaveId);
+            Map<Integer, DetalheExecucaoJSON> execucoesInspecao =
+                execucoesDisponiveis
+                    ? execucoesPorAeronave.get(aeronaveId)
+                    : new Map<Integer, DetalheExecucaoJSON>();
             
             // Verificar se TBO existe na lista de inspeções ativas
             Boolean tboEncontrada = false;
@@ -412,8 +456,20 @@ public without sharing class InspecaoAeronaveService {
                     }
                 }
                 
+                DetalheExecucaoJSON ultimaExec = inspJSON.idInspecao == null
+                    ? null
+                    : execucoesInspecao.get(inspJSON.idInspecao);
+
+                Boolean dadosExecucaoProcessados = false;
+                if (execucoesDisponiveis || !isUpdate) {
+                    limparDadosExecucao(registro);
+                    aplicarExecucao(registro, ultimaExec);
+                    aplicarConfiguracaoInicial(registro, inspJSON);
+                    dadosExecucaoProcessados = true;
+                }
+
                 // Processar detalheUltimaExecucao (pegar primeiro item)
-                if (inspJSON.detalheUltimaExecucao != null && !inspJSON.detalheUltimaExecucao.isEmpty()) {
+                if (!dadosExecucaoProcessados && inspJSON.detalheUltimaExecucao != null && !inspJSON.detalheUltimaExecucao.isEmpty()) {
                     DetalheExecucaoJSON exec = inspJSON.detalheUltimaExecucao[0];
                     
                     // Data de Execução
@@ -464,6 +520,9 @@ public without sharing class InspecaoAeronaveService {
                     } catch (Exception e) {
                         System.debug(LoggingLevel.WARN, 'Erro ao usar inicioHoras como Horas_Proxima: ' + inspJSON.inicioHoras);
                     }
+                }
+                if (registro.Data_Proxima__c == null && String.isNotBlank(inspJSON.inicioTempo)) {
+                    registro.Data_Proxima__c = converterDataPlaneit(inspJSON.inicioTempo);
                 }
                 
                 // NOTA: Horas_Restantes__c NÃO é salvo no banco de dados
@@ -528,6 +587,7 @@ public without sharing class InspecaoAeronaveService {
             WHERE Aeronave__c IN :idsAeronaves
             AND Ativa__c = true
             AND Chave_Unica__c NOT IN :chavesRecebidas
+            WITH SYSTEM_MODE
         ];
         
         for (Inspecao_Aeronave__c insp : inspecoesParaArquivar) {
@@ -546,17 +606,29 @@ public without sharing class InspecaoAeronaveService {
         // =====================================================================
         
         try {
+            resultado.totalInseridos = 0;
+            resultado.totalAtualizados = 0;
+            Integer gravacoesComSucesso = 0;
+
             // Upsert inspeções usando Chave_Unica__c (External ID)
             if (!registrosParaUpsert.isEmpty()) {
                 Database.UpsertResult[] upsertResults = Database.upsert(
                     registrosParaUpsert, 
                     Inspecao_Aeronave__c.Chave_Unica__c, 
-                    false
+                    false,
+                    AccessLevel.SYSTEM_MODE
                 );
                 
-                // Log de erros
                 for (Integer i = 0; i < upsertResults.size(); i++) {
-                    if (!upsertResults[i].isSuccess()) {
+                    if (upsertResults[i].isSuccess()) {
+                        gravacoesComSucesso++;
+                        if (upsertResults[i].isCreated()) {
+                            resultado.totalInseridos++;
+                        } else {
+                            resultado.totalAtualizados++;
+                        }
+                    } else {
+                        resultado.totalFalhas++;
                         for (Database.Error err : upsertResults[i].getErrors()) {
                             System.debug(LoggingLevel.ERROR, 'Erro upsert inspeção: ' + err.getMessage());
                         }
@@ -566,14 +638,29 @@ public without sharing class InspecaoAeronaveService {
             
             // Atualizar aeronaves
             if (!aeronavesParaAtualizar.isEmpty()) {
-                update aeronavesParaAtualizar;
+                for (Database.SaveResult saveResult : Database.update(
+                    aeronavesParaAtualizar,
+                    false,
+                    AccessLevel.SYSTEM_MODE
+                )) {
+                    if (saveResult.isSuccess()) {
+                        gravacoesComSucesso++;
+                    } else {
+                        resultado.totalFalhas++;
+                    }
+                }
             }
             
-            resultado.sucesso = true;
-            resultado.mensagem = 'Sincronização concluída! ' +
+            resultado.sucesso = resultado.totalFalhas == 0 || gravacoesComSucesso > 0;
+            resultado.sucessoParcial = resultado.totalFalhas > 0 && gravacoesComSucesso > 0;
+            resultado.mensagem = resultado.sucessoParcial
+                ? 'Sincronização concluída parcialmente. '
+                : 'Sincronização concluída! ';
+            resultado.mensagem +=
                 'Inseridos: ' + resultado.totalInseridos + ', ' +
                 'Atualizados: ' + resultado.totalAtualizados + ', ' +
-                'Inativos: ' + resultado.totalInativos;
+                'Inativos: ' + resultado.totalInativos + ', ' +
+                'Falhas: ' + resultado.totalFalhas;
                 
         } catch (DmlException e) {
             resultado.sucesso = false;
@@ -630,6 +717,117 @@ public without sharing class InspecaoAeronaveService {
             return null;
         }
     }
+
+    private static List<DetalheExecucaoJSON> buscarExecucoesAPI(
+        String token,
+        Decimal idAeronavePlaneit
+    ) {
+        try {
+            String endpoint = NAMED_CREDENTIAL + EXECUCOES_ENDPOINT +
+                '?idAeronave=' + String.valueOf(idAeronavePlaneit.intValue());
+
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint(endpoint);
+            req.setMethod('GET');
+            req.setHeader('Authorization', 'Bearer ' + token);
+            req.setHeader('Accept', 'application/json');
+            req.setHeader('Content-Type', 'application/json');
+            req.setTimeout(TIMEOUT_MS);
+
+            HttpResponse res = new Http().send(req);
+            if (res.getStatusCode() != 200) {
+                System.debug(
+                    LoggingLevel.ERROR,
+                    'Erro buscar execucoes: HTTP ' + res.getStatusCode()
+                );
+                return null;
+            }
+
+            ExecucoesResponse execucoesRes = (ExecucoesResponse) JSON.deserialize(
+                res.getBody(),
+                ExecucoesResponse.class
+            );
+            return execucoesRes.codigo == 200 && execucoesRes.data != null
+                ? execucoesRes.data
+                : null;
+        } catch (Exception e) {
+            System.debug(
+                LoggingLevel.ERROR,
+                'Excecao buscar execucoes: ' + e.getMessage()
+            );
+            return null;
+        }
+    }
+
+    private static Map<Integer, DetalheExecucaoJSON> mapearUltimasExecucoes(
+        List<DetalheExecucaoJSON> execucoes
+    ) {
+        Map<Integer, DetalheExecucaoJSON> resultado =
+            new Map<Integer, DetalheExecucaoJSON>();
+        if (execucoes == null) {
+            return resultado;
+        }
+
+        for (DetalheExecucaoJSON execucao : execucoes) {
+            if (execucao.idInspecao == null) {
+                continue;
+            }
+
+            DetalheExecucaoJSON atual = resultado.get(execucao.idInspecao);
+            if (atual == null) {
+                resultado.put(execucao.idInspecao, execucao);
+                continue;
+            }
+
+            Date dataNova = converterDataPlaneit(execucao.dataExecucao);
+            Date dataAtual = converterDataPlaneit(atual.dataExecucao);
+            if (dataNova != null && (dataAtual == null || dataNova > dataAtual)) {
+                resultado.put(execucao.idInspecao, execucao);
+            }
+        }
+        return resultado;
+    }
+
+    private static void limparDadosExecucao(Inspecao_Aeronave__c registro) {
+        registro.Data_Execucao__c = null;
+        registro.Horas_Execucao__c = null;
+        registro.Data_Proxima__c = null;
+        registro.Horas_Proxima__c = null;
+        registro.Responsavel_Execucao__c = null;
+    }
+
+    private static void aplicarExecucao(
+        Inspecao_Aeronave__c registro,
+        DetalheExecucaoJSON execucao
+    ) {
+        if (execucao == null) {
+            return;
+        }
+
+        registro.Data_Execucao__c = converterDataPlaneit(execucao.dataExecucao);
+        registro.Horas_Execucao__c = converterDecimalPlaneit(
+            execucao.horasExecucao
+        );
+        registro.Data_Proxima__c = converterDataPlaneit(execucao.dataProxima);
+        registro.Horas_Proxima__c = converterDecimalPlaneit(
+            execucao.horasProxima
+        );
+        registro.Responsavel_Execucao__c = execucao.responsavelExecucao;
+    }
+
+    private static void aplicarConfiguracaoInicial(
+        Inspecao_Aeronave__c registro,
+        InspecaoJSON inspecao
+    ) {
+        if (registro.Data_Proxima__c == null) {
+            registro.Data_Proxima__c = converterDataPlaneit(inspecao.inicioTempo);
+        }
+        if (registro.Horas_Proxima__c == null) {
+            registro.Horas_Proxima__c = converterDecimalPlaneit(
+                inspecao.inicioHoras
+            );
+        }
+    }
     
     /**
      * @description Busca totais de uma aeronave via API
@@ -681,51 +879,43 @@ public without sharing class InspecaoAeronaveService {
      * @param horasTotais Horas totais da aeronave
      * @return Status calculado
      */
+    private static Date converterDataPlaneit(String dataTexto) {
+        if (String.isBlank(dataTexto)) {
+            return null;
+        }
+
+        try {
+            String dataNormalizada = dataTexto.length() >= 10
+                ? dataTexto.substring(0, 10)
+                : dataTexto;
+            return Date.valueOf(dataNormalizada);
+        } catch (Exception e) {
+            System.debug(
+                LoggingLevel.WARN,
+                'Erro ao converter data Planeit: ' + dataTexto
+            );
+            return null;
+        }
+    }
+
+    private static Decimal converterDecimalPlaneit(String valor) {
+        if (String.isBlank(valor)) {
+            return null;
+        }
+
+        try {
+            return Decimal.valueOf(valor);
+        } catch (Exception e) {
+            System.debug(
+                LoggingLevel.WARN,
+                'Erro ao converter decimal Planeit: ' + valor
+            );
+            return null;
+        }
+    }
+
     private static String calcularStatusInspecao(Inspecao_Aeronave__c registro, Decimal horasTotais) {
-        // Se está inativa
-        if (!registro.Ativa__c) {
-            return 'INATIVA';
-        }
-        
-        // Para CVA, verificar por data
-        if (registro.Nome_Inspecao__c != null && 
-            registro.Nome_Inspecao__c.equalsIgnoreCase('CVA')) {
-            
-            if (registro.Data_Proxima__c != null) {
-                Date hoje = Date.today();
-                Integer diasRestantes = registro.Data_Proxima__c.daysBetween(hoje) * -1;
-                
-                if (diasRestantes < 0) {
-                    return 'VENCIDA';
-                } else if (diasRestantes <= 30) {
-                    return 'PRÓXIMA';
-                } else {
-                    return 'EM DIA';
-                }
-            }
-            return 'SEM DATA';
-        }
-        
-        // Para outras inspeções, verificar por horas
-        // Calcular horas restantes dinamicamente (não salvamos no banco)
-        if (registro.Horas_Proxima__c != null && horasTotais != null) {
-            Decimal horasRestantes = registro.Horas_Proxima__c - horasTotais;
-            
-            if (horasRestantes < 0) {
-                return 'VENCIDA';
-            } else if (horasRestantes <= 10) {
-                return 'PRÓXIMA';
-            } else {
-                return 'EM DIA';
-            }
-        }
-        
-        // Se tem apenas Horas_Proxima mas não temos horas totais
-        if (registro.Horas_Proxima__c != null) {
-            return 'SEM HORAS TOTAIS';
-        }
-        
-        return 'SEM DADOS';
+        return InspecaoStatusService.calculate(registro, horasTotais).status;
     }
     
     /**

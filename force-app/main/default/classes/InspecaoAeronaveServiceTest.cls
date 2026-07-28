@@ -41,6 +41,25 @@ private class InspecaoAeronaveServiceTest {
                 res.setStatusCode(200);
             }
             // Mock de inspeções
+            else if (endpoint.contains('/aeronave/inspecao/execucoes')) {
+                res.setBody(
+                    '{"codigo":200,"mensagem":"OK","data":[' +
+                    '{"idExecucaoInspecao":1,"idInspecao":3057,' +
+                    '"dataExecucao":"2025-11-30","horasExecucao":"2300",' +
+                    '"dataProxima":"2026-01-30","horasProxima":"2400"},' +
+                    '{"idExecucaoInspecao":2,"idInspecao":3057,' +
+                    '"dataExecucao":"2025-12-30","horasExecucao":"2400",' +
+                    '"dataProxima":"2026-03-07","horasProxima":"2500",' +
+                    '"responsavelExecucao":"FLIGHT CORNELIO"},' +
+                    '{"idExecucaoInspecao":3,"idInspecao":3058,' +
+                    '"dataExecucao":"2025-05-22","dataProxima":"2026-05-22",' +
+                    '"responsavelExecucao":"ANAC"},' +
+                    '{"idExecucaoInspecao":4,"idInspecao":3059,' +
+                    '"horasProxima":"2600","responsavelExecucao":"FLIGHT CORNELIO"}' +
+                    ']}'
+                );
+                res.setStatusCode(200);
+            }
             else if (endpoint.contains('inspecoes')) {
                 String jsonResponse = '{' +
                     '"codigo": 200,' +
@@ -117,6 +136,10 @@ private class InspecaoAeronaveServiceTest {
                 res.setBody('{"codigo":200,"mensagem":"OK","data":{"access_token":"mock_token","token_type":"Bearer"}}');
                 res.setStatusCode(200);
             }
+            else if (endpoint.contains('/aeronave/inspecao/execucoes')) {
+                res.setBody('{"codigo":200,"mensagem":"OK","data":[]}');
+                res.setStatusCode(200);
+            }
             else if (endpoint.contains('inspecoes')) {
                 // Retorna inspeções SEM TBO (TBO vencida)
                 String jsonResponse = '{' +
@@ -162,6 +185,14 @@ private class InspecaoAeronaveServiceTest {
                 res.setBody('{"codigo":200,"mensagem":"OK","data":{"access_token":"mock_token","token_type":"Bearer"}}');
                 res.setStatusCode(200);
             }
+            else if (endpoint.contains('/aeronave/inspecao/execucoes')) {
+                res.setBody(
+                    '{"codigo":200,"mensagem":"OK","data":[' +
+                    '{"idExecucaoInspecao":5,"idInspecao":3061,' +
+                    '"horasProxima":"3000"}]}'
+                );
+                res.setStatusCode(200);
+            }
             else if (endpoint.contains('inspecoes')) {
                 // Retorna inspeção INATIVA (situacaoInspecao = 'I')
                 String jsonResponse = '{' +
@@ -201,6 +232,78 @@ private class InspecaoAeronaveServiceTest {
             return res;
         }
     }
+
+    private class FailureScenarioMock implements HttpCalloutMock {
+        private String scenario;
+
+        FailureScenarioMock(String scenario) {
+            this.scenario = scenario;
+        }
+
+        public HTTPResponse respond(HTTPRequest req) {
+            if (scenario == 'timeout') {
+                throw new CalloutException('Read timed out');
+            }
+
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            if (req.getEndpoint().contains('login')) {
+                if (scenario == '401') {
+                    res.setStatusCode(401);
+                    res.setBody('{"codigo":401,"mensagem":"Token expirado"}');
+                } else {
+                    res.setStatusCode(200);
+                    res.setBody('{"codigo":200,"data":{"access_token":"mock_token"}}');
+                }
+                return res;
+            }
+
+            if (scenario == 'invalid') {
+                res.setStatusCode(200);
+                res.setBody('{invalid json');
+                return res;
+            }
+
+            if (
+                scenario == 'partial'
+                && req.getEndpoint().contains('idAeronave=1600')
+            ) {
+                res.setStatusCode(500);
+                res.setBody('{"codigo":500,"mensagem":"Falha temporária"}');
+                return res;
+            }
+
+            if (
+                scenario == 'executionFailure'
+                && req.getEndpoint().contains('/aeronave/inspecao/execucoes')
+            ) {
+                res.setStatusCode(503);
+                res.setBody('{"codigo":503,"mensagem":"Indisponivel"}');
+                return res;
+            }
+
+            if (req.getEndpoint().contains('/aeronave/inspecao/execucoes')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo":200,"data":[]}');
+                return res;
+            }
+
+            if (req.getEndpoint().contains('inspecoes')) {
+                res.setStatusCode(200);
+                res.setBody(
+                    '{"codigo":200,"data":[{"idInspecao":7001,' +
+                    '"idAeronave":1599,"nomeInspecao":"TBO",' +
+                    '"situacaoInspecao":"A","detalheUltimaExecucao":[]}]}'
+                );
+            } else {
+                res.setStatusCode(200);
+                res.setBody(
+                    '{"codigo":200,"data":{"horasVooEtapaDecimalTotal":2500}}'
+                );
+            }
+            return res;
+        }
+    }
     
     /**
      * @description Testa sincronização bem-sucedida de inspeções
@@ -216,6 +319,28 @@ private class InspecaoAeronaveServiceTest {
         InspecaoAeronaveService.ResultadoSincronizacao resultado = 
             InspecaoAeronaveService.sincronizarInspecoesAeronave(aeronave.Id);
         Test.stopTest();
+
+        Map<String, Inspecao_Aeronave__c> execucoesPorNome =
+            new Map<String, Inspecao_Aeronave__c>();
+        for (Inspecao_Aeronave__c inspecao : [
+            SELECT Nome_Inspecao__c, Data_Execucao__c, Horas_Execucao__c,
+                   Data_Proxima__c, Horas_Proxima__c, Responsavel_Execucao__c
+            FROM Inspecao_Aeronave__c
+            WHERE Aeronave__c = :aeronave.Id
+        ]) {
+            execucoesPorNome.put(inspecao.Nome_Inspecao__c, inspecao);
+        }
+
+        Inspecao_Aeronave__c cemHoras = execucoesPorNome.get('100hrs');
+        System.assertEquals(Date.newInstance(2025, 12, 30), cemHoras.Data_Execucao__c);
+        System.assertEquals(2400, cemHoras.Horas_Execucao__c);
+        System.assertEquals(Date.newInstance(2026, 3, 7), cemHoras.Data_Proxima__c);
+        System.assertEquals(2500, cemHoras.Horas_Proxima__c);
+        System.assertEquals('FLIGHT CORNELIO', cemHoras.Responsavel_Execucao__c);
+
+        Inspecao_Aeronave__c cva = execucoesPorNome.get('CVA');
+        System.assertEquals(Date.newInstance(2025, 5, 22), cva.Data_Execucao__c);
+        System.assertEquals(Date.newInstance(2026, 5, 22), cva.Data_Proxima__c);
         
         System.debug('### Resultado sucesso: ' + resultado.sucesso);
         System.debug('### Resultado mensagem: ' + resultado.mensagem);
@@ -227,7 +352,9 @@ private class InspecaoAeronaveServiceTest {
         
         // Verificar registros criados
         List<Inspecao_Aeronave__c> inspecoes = [
-            SELECT Id, Nome_Inspecao__c, Ativa__c, Status_Inspecao__c
+            SELECT Id, Nome_Inspecao__c, Ativa__c, Status_Inspecao__c,
+                   Data_Execucao__c, Horas_Execucao__c, Data_Proxima__c,
+                   Horas_Proxima__c, Responsavel_Execucao__c
             FROM Inspecao_Aeronave__c
             WHERE Aeronave__c = :aeronave.Id
         ];
@@ -457,5 +584,118 @@ private class InspecaoAeronaveServiceTest {
         
         System.assertEquals(200, res.getStatusCode(), 'Status code deveria ser 200');
         System.assert(res.getBody().contains('access_token'), 'Response deveria conter access_token');
+    }
+
+    @isTest
+    static void testFalhaAutenticacao401() {
+        Aeronave__c aeronave = [SELECT Id FROM Aeronave__c LIMIT 1];
+        Test.setMock(HttpCalloutMock.class, new FailureScenarioMock('401'));
+
+        Test.startTest();
+        InspecaoAeronaveService.ResultadoSincronizacao resultado =
+            InspecaoAeronaveService.sincronizarInspecoesAeronave(aeronave.Id);
+        Test.stopTest();
+
+        System.assertEquals(false, resultado.sucesso);
+        System.assert(resultado.mensagem.contains('autenticação'));
+    }
+
+    @isTest
+    static void testRespostaInvalida() {
+        Aeronave__c aeronave = [SELECT Id FROM Aeronave__c LIMIT 1];
+        Test.setMock(HttpCalloutMock.class, new FailureScenarioMock('invalid'));
+
+        Test.startTest();
+        InspecaoAeronaveService.ResultadoSincronizacao resultado =
+            InspecaoAeronaveService.sincronizarInspecoesAeronave(aeronave.Id);
+        Test.stopTest();
+
+        System.assertEquals(false, resultado.sucesso);
+        System.assertEquals(1, resultado.totalFalhas);
+    }
+
+    @isTest
+    static void testTimeout() {
+        Aeronave__c aeronave = [SELECT Id FROM Aeronave__c LIMIT 1];
+        Test.setMock(HttpCalloutMock.class, new FailureScenarioMock('timeout'));
+
+        Test.startTest();
+        InspecaoAeronaveService.ResultadoSincronizacao resultado =
+            InspecaoAeronaveService.sincronizarInspecoesAeronave(aeronave.Id);
+        Test.stopTest();
+
+        System.assertEquals(false, resultado.sucesso);
+        System.assert(resultado.mensagem.contains('autenticação'));
+    }
+
+    @isTest
+    static void testSucessoParcialPreservaRegistrosValidos() {
+        Aeronave__c segunda = new Aeronave__c(
+            Name = 'PT-PAR',
+            Ativo__c = true,
+            Horas_Totais_de_Voo__c = 100,
+            Id_Planeit__c = 1600
+        );
+        insert segunda;
+        List<Aeronave__c> aeronaves = [
+            SELECT Id, Name, Id_Planeit__c, Horas_Totais_de_Voo__c
+            FROM Aeronave__c
+            ORDER BY Id_Planeit__c
+        ];
+        Test.setMock(HttpCalloutMock.class, new FailureScenarioMock('partial'));
+
+        Test.startTest();
+        InspecaoAeronaveService.ResultadoSincronizacao resultado =
+            InspecaoAeronaveService.sincronizarInspecoesLote(aeronaves);
+        Test.stopTest();
+
+        System.assertEquals(true, resultado.sucesso);
+        System.assertEquals(true, resultado.sucessoParcial);
+        System.assertEquals(1, resultado.totalFalhas);
+        System.assert(resultado.totalInseridos > 0);
+        System.assertEquals(
+            1,
+            [SELECT COUNT() FROM Inspecao_Aeronave__c WHERE Id_Inspecao_Planeit__c = '7001']
+        );
+    }
+
+    @isTest
+    static void testFalhaExecucoesPreservaDadosAnteriores() {
+        Aeronave__c aeronave = [SELECT Id FROM Aeronave__c LIMIT 1];
+        insert new Inspecao_Aeronave__c(
+            Aeronave__c = aeronave.Id,
+            Chave_Unica__c = '1599_TBO',
+            Id_Inspecao_Planeit__c = '7001',
+            Id_Aeronave_Planeit__c = '1599',
+            Nome_Inspecao__c = 'TBO',
+            Ativa__c = true,
+            Data_Execucao__c = Date.newInstance(2026, 1, 10),
+            Horas_Execucao__c = 2400,
+            Data_Proxima__c = Date.newInstance(2027, 1, 10),
+            Horas_Proxima__c = 3000,
+            Responsavel_Execucao__c = 'RESPONSAVEL ORIGINAL'
+        );
+        Test.setMock(
+            HttpCalloutMock.class,
+            new FailureScenarioMock('executionFailure')
+        );
+
+        Test.startTest();
+        InspecaoAeronaveService.ResultadoSincronizacao resultado =
+            InspecaoAeronaveService.sincronizarInspecoesAeronave(aeronave.Id);
+        Test.stopTest();
+
+        Inspecao_Aeronave__c preservada = [
+            SELECT Data_Execucao__c, Horas_Execucao__c, Data_Proxima__c,
+                   Horas_Proxima__c, Responsavel_Execucao__c
+            FROM Inspecao_Aeronave__c
+            WHERE Chave_Unica__c = '1599_TBO'
+        ];
+        System.assertEquals(true, resultado.sucessoParcial);
+        System.assertEquals(Date.newInstance(2026, 1, 10), preservada.Data_Execucao__c);
+        System.assertEquals(2400, preservada.Horas_Execucao__c);
+        System.assertEquals(Date.newInstance(2027, 1, 10), preservada.Data_Proxima__c);
+        System.assertEquals(3000, preservada.Horas_Proxima__c);
+        System.assertEquals('RESPONSAVEL ORIGINAL', preservada.Responsavel_Execucao__c);
     }
 }
