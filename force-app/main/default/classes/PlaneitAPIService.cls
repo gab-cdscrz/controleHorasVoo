@@ -8,13 +8,15 @@
  * - Autenticação e gerenciamento de token (válido por 40 minutos)
  * - Consulta de voos de aeronaves
  * - Consulta de dados de abastecimento
- * - Transformação de dados para uso no Flow Builder
- * - Sincronização em lote de controle técnico
+ * - Transformação de dados para a página e processos assíncronos
+ * - Sincronização transacional de controle técnico
  * 
  * NOTA: Usa 'without sharing' para garantir acesso a todos os registros
  * durante a sincronização, independente das permissões do usuário.
  */
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexSuggestUsingNamedCred')
 public without sharing class PlaneitAPIService {
+    private class PlaneitSyncException extends Exception {}
     
     // =========================================================================
     // CONSTANTES E CONFIGURAÇÕES
@@ -248,50 +250,35 @@ public without sharing class PlaneitAPIService {
     }
     
     // =========================================================================
-    // MÉTODO INVOCÁVEL (usado pelo Flow)
+    // CONTRATO DE SINCRONIZAÇÃO
     // =========================================================================
     
     /**
-     * Classe wrapper para agrupar parâmetros da invocação em lote (exposta ao Flow)
+     * Agrupa os parâmetros usados pela página e pelo processamento assíncrono.
      */
     public class SincronizarVoosLoteRequest {
-        @InvocableVariable(label='IDs das Aeronaves no Planeit' required=true)
         public List<Decimal> idsAeronavesPlaneit;
         
-        @InvocableVariable(label='IDs dos Records de Aeronaves' required=true)
         public List<String> idsAeronavesRecords;
         
-        @InvocableVariable(label='Data de Início' required=true)
         public Date dataInicio;
         
-        @InvocableVariable(label='Data de Fim' required=true)
         public Date dataFim;
     }
     
     /**
-     * Método invocável para sincronizar voos de múltiplas aeronaves em uma única transação
+     * Sincroniza voos de uma ou mais aeronaves em uma única transação.
      * Arquitetura: Todos os callouts primeiro → Depois todos os DMLs
      * Evita erro "You have uncommitted work pending"
      * @param loteRequests Lista contendo uma request com múltiplas aeronaves
      * @return Lista de respostas (uma por aeronave)
      */
-    @InvocableMethod(
-        label='Sincronizar Voos do Planeit' 
-        description='Busca voos e cria/atualiza registros Controle_Horas_Voo__c automaticamente'
-        category='Integração Planeit'
-    )
     public static List<SincronizarVoosResponse> sincronizarVoosDoPlaneit(List<SincronizarVoosLoteRequest> loteRequests) {
-        List<SincronizarVoosResponse> respostas = new List<SincronizarVoosResponse>();
-        
         if (loteRequests == null || loteRequests.isEmpty()) {
-            SincronizarVoosResponse respErro = new SincronizarVoosResponse();
-            respErro.sucesso = false;
-            respErro.mensagem = 'Nenhuma requisição fornecida';
-            respostas.add(respErro);
-            return respostas;
+            return criarRespostaErro('Nenhuma requisição fornecida', 'VALIDACAO', false);
         }
         
-        // Pegar primeira request (Flow sempre envia apenas uma)
+        // O contrato atual recebe uma única requisição agregada.
         SincronizarVoosLoteRequest loteReq = loteRequests[0];
         List<Decimal> idsAeronavesPlaneit = loteReq.idsAeronavesPlaneit;
         List<String> idsAeronavesRecords = loteReq.idsAeronavesRecords;
@@ -300,39 +287,32 @@ public without sharing class PlaneitAPIService {
         
         // Validação
         if (idsAeronavesPlaneit == null || idsAeronavesPlaneit.isEmpty()) {
-            SincronizarVoosResponse respErro = new SincronizarVoosResponse();
-            respErro.sucesso = false;
-            respErro.mensagem = 'Nenhuma aeronave fornecida';
-            respostas.add(respErro);
-            return respostas;
+            return criarRespostaErro('Nenhuma aeronave fornecida', 'VALIDACAO', false);
         }
         
-        if (idsAeronavesRecords.size() != idsAeronavesPlaneit.size()) {
-            SincronizarVoosResponse respErro = new SincronizarVoosResponse();
-            respErro.sucesso = false;
-            respErro.mensagem = 'Quantidade de IDs inconsistente';
-            respostas.add(respErro);
-            return respostas;
+        if (idsAeronavesRecords == null || idsAeronavesRecords.size() != idsAeronavesPlaneit.size()) {
+            return criarRespostaErro('Quantidade de IDs inconsistente', 'VALIDACAO', false);
+        }
+
+        if (dataInicio == null || dataFim == null || dataInicio > dataFim) {
+            return criarRespostaErro('Período de sincronização inválido', 'VALIDACAO', false);
         }
         
         // Obter token uma única vez
         String token = obterToken();
         
         if (String.isBlank(token)) {
-            SincronizarVoosResponse respErro = new SincronizarVoosResponse();
-            respErro.sucesso = false;
-            respErro.mensagem = 'Falha na autenticação';
-            respostas.add(respErro);
-            return respostas;
+            return criarRespostaErro('Falha na autenticação com o Planeit', 'AUTENTICACAO', true);
         }
         
         // VALIDAÇÃO: Verificar limite de callouts (2 por aeronave: totais + voos, mais 1 de autenticação)
         Integer calloutsNecessarios = 1 + (idsAeronavesPlaneit.size() * 2);
         if (calloutsNecessarios > MAX_CALLOUTS) {
-            SincronizarVoosResponse respErro = new SincronizarVoosResponse();
-            respErro.sucesso = false;
-            respErro.mensagem = 'Limite excedido: ' + idsAeronavesPlaneit.size() + ' aeronaves requerem ' + calloutsNecessarios + ' callouts (máx: ' + MAX_CALLOUTS + ')';
-            return new List<SincronizarVoosResponse>{ respErro };
+            return criarRespostaErro(
+                'Limite de consultas excedido para ' + idsAeronavesPlaneit.size() + ' aeronaves',
+                'LIMITE',
+                true
+            );
         }
         
         // FASE 1: BUSCAR HORAS TOTAIS DAS AERONAVES (APENAS CALLOUT, SEM DML)
@@ -356,10 +336,14 @@ public without sharing class PlaneitAPIService {
         // FASE 2: BUSCAR TODOS OS VOOS (APENAS CALLOUTS)
         Map<Integer, List<VooData>> voosPorAeronave = new Map<Integer, List<VooData>>();
         
-        for (Integer i = 0; i < idsAeronavesPlaneit.size(); i++) {
-            Integer idAeronave = idsAeronavesPlaneit[i].intValue();
-            List<VooData> voos = buscarVoosAPI(token, idAeronave, dataInicio, dataFim);
-            voosPorAeronave.put(idAeronave, voos);
+        try {
+            for (Integer i = 0; i < idsAeronavesPlaneit.size(); i++) {
+                Integer idAeronave = idsAeronavesPlaneit[i].intValue();
+                List<VooData> voos = buscarVoosAPI(token, idAeronave, dataInicio, dataFim);
+                voosPorAeronave.put(idAeronave, voos);
+            }
+        } catch (PlaneitSyncException e) {
+            return criarRespostaErro(e.getMessage(), 'API', true);
         }
         
         // FASE 3: COLETAR TODOS OS NOMES DE PILOTOS, OPERADORES E IDS DE ABASTECIMENTOS
@@ -603,6 +587,7 @@ public without sharing class PlaneitAPIService {
         Integer totalAbastAtualizados = 0;
         Integer totalAbastDeletados = 0;
         
+        Savepoint savepointSincronizacao = Database.setSavepoint();
         try {
             // 1. Atualizar horas totais das aeronaves
             if (!horasTotaisPorAeronave.isEmpty()) {
@@ -664,22 +649,23 @@ public without sharing class PlaneitAPIService {
                 System.debug('🗑️ Deletados ' + totalDeletados + ' voos que não existem mais no Planeit');
             }
             
-        } catch (DmlException e) {
+        } catch (Exception e) {
+            Database.rollback(savepointSincronizacao);
             System.debug(LoggingLevel.ERROR, 'Erro DML ao salvar: ' + e.getMessage());
             System.debug(LoggingLevel.ERROR, 'Stack Trace: ' + e.getStackTraceString());
-            
-            SincronizarVoosResponse respErro = new SincronizarVoosResponse();
-            respErro.sucesso = false;
-            respErro.mensagem = 'Erro ao salvar dados: ' + e.getMessage();
-            return new List<SincronizarVoosResponse>{ respErro };
+            return criarRespostaErro('Não foi possível salvar a sincronização', 'DML', true);
         }
         
-        // Consolidar resultados em uma única resposta para o Flow
+        // Consolidar resultados em uma única resposta.
         SincronizarVoosResponse respostaConsolidada = new SincronizarVoosResponse();
         respostaConsolidada.sucesso = true;
         respostaConsolidada.totalImportados = totalCriados;
         respostaConsolidada.totalAtualizados = totalAtualizados;
         respostaConsolidada.totalDeletados = totalDeletados;
+        respostaConsolidada.totalAbastecimentosImportados = totalAbastCriados;
+        respostaConsolidada.totalAbastecimentosAtualizados = totalAbastAtualizados;
+        respostaConsolidada.totalAbastecimentosDeletados = totalAbastDeletados;
+        respostaConsolidada.podeTentarNovamente = false;
         respostaConsolidada.mensagem = 'Processadas ' + idsAeronavesPlaneit.size() + ' aeronaves. ' +
                                        'Voos - Criados: ' + totalCriados + ', Atualizados: ' + totalAtualizados + 
                                        ', Deletados: ' + totalDeletados + '. ' +
@@ -747,8 +733,6 @@ public without sharing class PlaneitAPIService {
      * @return Lista de VooData da API
      */
     private static List<VooData> buscarVoosAPI(String token, Integer idAeronave, Date dataInicio, Date dataFim) {
-        List<VooData> voos = new List<VooData>();
-        
         try {
             // Montar URL com parâmetros (API espera dataVooInicio e dataVooFim)
             String endpoint = NAMED_CREDENTIAL + VOOS_ENDPOINT + '?idAeronave=' + idAeronave;
@@ -764,31 +748,59 @@ public without sharing class PlaneitAPIService {
             HttpRequest httpReq = new HttpRequest();
             httpReq.setEndpoint(endpoint);
             httpReq.setMethod('GET');
-            httpReq.setHeader('Authorization', 'Bearer ' + token);
+            httpReq.setHeader('Authorization', 'Bearer ' + token); // NOPMD - endpoint uses a Named Credential.
             httpReq.setHeader('Accept', 'application/json');
             httpReq.setTimeout(TIMEOUT_SEGUNDOS * 1000);
             
             Http http = new Http();
             HttpResponse res = http.send(httpReq);
             
-            if (res.getStatusCode() == 200) {
-                VoosResponse voosRes = (VoosResponse) JSON.deserialize(
-                    res.getBody(), 
-                    VoosResponse.class
+            if (res.getStatusCode() != 200) {
+                throw new PlaneitSyncException(
+                    'Falha ao consultar voos da aeronave ' + idAeronave +
+                    ' (HTTP ' + res.getStatusCode() + ')'
                 );
-                
-                if (voosRes.codigo == 200 && voosRes.data != null) {
-                    return voosRes.data;
-                }
-            } else {
-                System.debug(LoggingLevel.ERROR, 'Erro ao buscar voos aeronave ' + idAeronave + ': HTTP ' + res.getStatusCode());
             }
-            
+
+            VoosResponse voosRes = (VoosResponse) JSON.deserialize(
+                res.getBody(),
+                VoosResponse.class
+            );
+
+            if (voosRes == null || voosRes.codigo != 200) {
+                throw new PlaneitSyncException(
+                    'Resposta inválida ao consultar voos da aeronave ' + idAeronave
+                );
+            }
+
+            return voosRes.data == null ? new List<VooData>() : voosRes.data;
+        } catch (PlaneitSyncException e) {
+            throw e;
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Exceção ao buscar voos aeronave ' + idAeronave + ': ' + e.getMessage() + '\n' + e.getStackTraceString());
+            throw new PlaneitSyncException(
+                'Resposta inválida ao consultar voos da aeronave ' + idAeronave
+            );
         }
-        
-        return voos;
+    }
+
+    private static List<SincronizarVoosResponse> criarRespostaErro(
+        String mensagem,
+        String tipoErro,
+        Boolean podeTentarNovamente
+    ) {
+        SincronizarVoosResponse resposta = new SincronizarVoosResponse();
+        resposta.sucesso = false;
+        resposta.mensagem = mensagem;
+        resposta.tipoErro = tipoErro;
+        resposta.podeTentarNovamente = podeTentarNovamente;
+        resposta.totalImportados = 0;
+        resposta.totalAtualizados = 0;
+        resposta.totalDeletados = 0;
+        resposta.totalAbastecimentosImportados = 0;
+        resposta.totalAbastecimentosAtualizados = 0;
+        resposta.totalAbastecimentosDeletados = 0;
+        return new List<SincronizarVoosResponse>{ resposta };
     }
     
     /**
@@ -1029,7 +1041,7 @@ public without sharing class PlaneitAPIService {
             HttpRequest req = new HttpRequest();
             req.setEndpoint(endpoint);
             req.setMethod('GET');
-            req.setHeader('Authorization', 'Bearer ' + token);
+            req.setHeader('Authorization', 'Bearer ' + token); // NOPMD - endpoint uses a Named Credential.
             req.setHeader('Content-Type', 'application/json');
             req.setTimeout(TIMEOUT_SEGUNDOS * 1000);
             
@@ -1075,7 +1087,7 @@ public without sharing class PlaneitAPIService {
             HttpRequest req = new HttpRequest();
             req.setEndpoint(endpoint);
             req.setMethod('GET');
-            req.setHeader('Authorization', 'Bearer ' + token);
+            req.setHeader('Authorization', 'Bearer ' + token); // NOPMD - endpoint uses a Named Credential.
             req.setHeader('Content-Type', 'application/json');
             req.setTimeout(TIMEOUT_SEGUNDOS * 1000);
             

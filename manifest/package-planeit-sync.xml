@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>PlaneitAPIService</members>
+        <members>PlaneitAircraftSelector</members>
+        <members>PlaneitAircraftSyncQueueable</members>
+        <members>PlaneitDailySyncScheduler</members>
+        <members>PlaneitScheduledSyncTest</members>
+        <members>PlaneitSyncLogService</members>
+        <members>SincronizarVoosResponse</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>Planeit_Sync_Log__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>Planeit_Sync_Monitoring</members>
+        <name>PermissionSet</name>
+    </types>
+    <version>67.0</version>
+</Package>
