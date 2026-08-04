@@ -5,5 +5,6 @@
     <label>Data Inicial da Consulta</label>
     <required>true</required>
     <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
     <type>Date</type>
 </CustomField>
