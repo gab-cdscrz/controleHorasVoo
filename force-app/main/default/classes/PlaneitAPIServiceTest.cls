@@ -421,6 +421,93 @@ private class PlaneitAPIServiceTest {
     }
     
     
+    /**
+     * Mock do endpoint dedicado /aeronave/abastecimentos: retorna um abastecimento
+     * avulso (idVoo nulo, id 39760) e um vinculado a um voo (idVoo preenchido, id 28636),
+     * que deve ser ignorado por esse fluxo pois já é tratado via /aeronave/voos.
+     */
+    private class AbastecimentosAvulsosMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            String endpoint = req.getEndpoint();
+
+            if (endpoint.containsIgnoreCase('login')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": {"access_token": "TEST", "token_type": "Bearer"}}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/voos')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": []}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/abastecimentos')) {
+                res.setStatusCode(200);
+                res.setBody('{' +
+                    '"codigo": 200,' +
+                    '"data": [{' +
+                        '"id": 39760,' +
+                        '"idVoo": null,' +
+                        '"idAeronave": 1599,' +
+                        '"dataAbastecimento": "2025-10-15",' +
+                        '"horaAbastecimento": "09:33:00",' +
+                        '"status": 1,' +
+                        '"localAbastecimento": "SNAX",' +
+                        '"origemDestino": "Origem",' +
+                        '"tipoAbastecimento": "AVGAS",' +
+                        '"quantidade": "999.00",' +
+                        '"unidade": "L",' +
+                        '"custoUnidade": "1.00",' +
+                        '"custoTotal": "999.00",' +
+                        '"codigoMoeda": "BRL",' +
+                        '"documentoReferencia": "Teste",' +
+                        '"observacoes": "Teste"' +
+                    '},{' +
+                        '"id": 28636,' +
+                        '"idVoo": 116364,' +
+                        '"idAeronave": 1599,' +
+                        '"dataAbastecimento": "2025-10-12",' +
+                        '"horaAbastecimento": "11:27:00",' +
+                        '"status": 1,' +
+                        '"localAbastecimento": "SNAX",' +
+                        '"origemDestino": "Destino",' +
+                        '"tipoAbastecimento": "AVGAS",' +
+                        '"quantidade": "118.40",' +
+                        '"unidade": "L",' +
+                        '"custoUnidade": "14.25",' +
+                        '"custoTotal": "1687.20",' +
+                        '"codigoMoeda": "BRL",' +
+                        '"documentoReferencia": "RR Fuel Assis",' +
+                        '"observacoes": null' +
+                    '}]' +
+                '}');
+            }
+            return res;
+        }
+    }
+
+    /**
+     * Mock do endpoint dedicado /aeronave/abastecimentos simulando que nenhum
+     * avulso existe mais no Planeit (resposta 200 com lista vazia - diferente de
+     * uma falha de callout, que não deve disparar exclusões).
+     */
+    private class AbastecimentosAvulsosVazioMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            String endpoint = req.getEndpoint();
+
+            if (endpoint.containsIgnoreCase('login')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": {"access_token": "TEST", "token_type": "Bearer"}}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/voos')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": []}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/abastecimentos')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": []}');
+            }
+            return res;
+        }
+    }
+
     // =========================================================================
     // TESTES
     // =========================================================================
@@ -1097,5 +1184,300 @@ private class PlaneitAPIServiceTest {
         Abastecimento__c abAposSync = [SELECT Quantidade__c, Editado_Manualmente__c FROM Abastecimento__c WHERE Id = :abProtegido.Id];
         System.assertEquals(999, abAposSync.Quantidade__c, 'Quantidade do abastecimento não deve ser sobrescrita');
         System.assertEquals(true, abAposSync.Editado_Manualmente__c, 'Flag do abastecimento deve permanecer ativo');
+    }
+
+    // =========================================================================
+    // TESTES PARA ABASTECIMENTOS AVULSOS (SEM VOO) - /aeronave/abastecimentos
+    // =========================================================================
+
+    /**
+     * Um abastecimento avulso (idVoo nulo) deve virar um placeholder Controle_Horas_Voo__c
+     * (Tipo__c='AB') + seu Abastecimento__c filho. O abastecimento vinculado a um voo que
+     * vem na mesma resposta (idVoo preenchido) não deve ser processado por este fluxo.
+     */
+    @IsTest
+    static void testSincronizarCriaAbastecimentoAvulso() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new AbastecimentosAvulsosMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso');
+
+        List<Controle_Horas_Voo__c> placeholders = [
+            SELECT Id, Id_Voo_Planeit__c FROM Controle_Horas_Voo__c WHERE Tipo__c = 'AB'
+        ];
+        System.assertEquals(1, placeholders.size(), 'Deve criar 1 placeholder AB para o abastecimento avulso');
+        System.assertEquals(null, placeholders[0].Id_Voo_Planeit__c, 'Placeholder não tem voo Planeit associado');
+
+        List<Abastecimento__c> abastecimentos = [
+            SELECT Voo__c, Quantidade__c, Custo_Unitario__c, Custo_Total__c, Local__c
+            FROM Abastecimento__c
+            WHERE Id_Abastecimento_Planeit__c = 39760
+        ];
+        System.assertEquals(1, abastecimentos.size(), 'Deve criar o abastecimento avulso');
+        System.assertEquals(placeholders[0].Id, abastecimentos[0].Voo__c, 'Abastecimento deve apontar para o placeholder');
+        System.assertEquals(999.00, abastecimentos[0].Quantidade__c, 'Quantidade deve ser convertida da string da API');
+        System.assertEquals(1.00, abastecimentos[0].Custo_Unitario__c, 'Custo unitário deve ser convertido da string da API');
+        System.assertEquals(999.00, abastecimentos[0].Custo_Total__c, 'Custo total deve ser convertido da string da API');
+        System.assertEquals('SNAX', abastecimentos[0].Local__c, 'Local deve ser SNAX');
+
+        List<Abastecimento__c> abastecimentoVinculado = [
+            SELECT Id FROM Abastecimento__c WHERE Id_Abastecimento_Planeit__c = 28636
+        ];
+        System.assertEquals(0, abastecimentoVinculado.size(),
+            'Abastecimento com idVoo preenchido não deve ser criado por este fluxo (tratado via /voos)');
+    }
+
+    /**
+     * Sincronizar um avulso que já existe no SF (criado em um ciclo anterior) não deve
+     * duplicar o placeholder nem o abastecimento - apenas atualiza os dados.
+     * Segue o mesmo padrão de testAtualizarVooExistente: o estado "já sincronizado
+     * anteriormente" é simulado inserindo o registro antes da chamada, pois uma segunda
+     * chamada real ao método na mesma transação violaria a regra "callout após DML
+     * pendente" (a arquitetura do método já assume que cada ciclo de sync é uma transação
+     * própria, como acontece em produção via PlaneitAircraftSyncQueueable).
+     */
+    @IsTest
+    static void testSincronizarAtualizaAbastecimentoAvulsoExistente() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new AbastecimentosAvulsosMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        Controle_Horas_Voo__c placeholderExistente = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Tipo__c = 'AB',
+            TOT__c = 0,
+            Horas_Voo__c = 0,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 15)
+        );
+        insert placeholderExistente;
+
+        Abastecimento__c abExistente = new Abastecimento__c(
+            Voo__c = placeholderExistente.Id,
+            Id_Abastecimento_Planeit__c = 39760,
+            Data_Voo__c = Date.newInstance(2025, 10, 15),
+            Quantidade__c = 1,
+            Custo_Unitario__c = 1,
+            Custo_Total__c = 1,
+            Local__c = 'ANTIGO'
+        );
+        insert abExistente;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso');
+        System.assertEquals(1, resultados[0].totalAbastecimentosAtualizados, 'Deve apenas atualizar o abastecimento avulso existente');
+
+        List<Controle_Horas_Voo__c> placeholders = [SELECT Id FROM Controle_Horas_Voo__c WHERE Tipo__c = 'AB'];
+        System.assertEquals(1, placeholders.size(), 'Não deve duplicar o placeholder AB');
+        System.assertEquals(placeholderExistente.Id, placeholders[0].Id, 'Deve reutilizar o placeholder existente');
+
+        List<Abastecimento__c> abastecimentos = [
+            SELECT Id, Quantidade__c, Local__c FROM Abastecimento__c WHERE Id_Abastecimento_Planeit__c = 39760
+        ];
+        System.assertEquals(1, abastecimentos.size(), 'Não deve duplicar o abastecimento avulso');
+        System.assertEquals(abExistente.Id, abastecimentos[0].Id, 'Deve reutilizar o abastecimento existente');
+        System.assertEquals(999.00, abastecimentos[0].Quantidade__c, 'Quantidade deve ser atualizada com o valor da API');
+        System.assertEquals('SNAX', abastecimentos[0].Local__c, 'Local deve ser atualizado com o valor da API');
+    }
+
+    /**
+     * Sem proteção manual, o par (abastecimento + placeholder) que sumiu do Planeit
+     * deve ser excluído.
+     */
+    @IsTest
+    static void testSincronizarExcluiAbastecimentoAvulsoOrfaoSemProtecao() {
+        // Arrange: avulso já sincronizado anteriormente, sem proteção manual
+        Test.setMock(HttpCalloutMock.class, new AbastecimentosAvulsosVazioMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        Controle_Horas_Voo__c placeholderOrfao = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Tipo__c = 'AB',
+            TOT__c = 0,
+            Horas_Voo__c = 0,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 15)
+        );
+        insert placeholderOrfao;
+
+        Abastecimento__c abOrfao = new Abastecimento__c(
+            Voo__c = placeholderOrfao.Id,
+            Id_Abastecimento_Planeit__c = 39760,
+            Data_Voo__c = Date.newInstance(2025, 10, 15),
+            Quantidade__c = 999,
+            Custo_Unitario__c = 1,
+            Custo_Total__c = 999
+        );
+        insert abOrfao;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act: sync roda com resposta 200 vazia do endpoint de abastecimentos (avulso sumiu do Planeit)
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso mesmo sem o avulso');
+
+        List<Abastecimento__c> abastecimentosRestantes = [
+            SELECT Id FROM Abastecimento__c WHERE Id_Abastecimento_Planeit__c = 39760
+        ];
+        System.assertEquals(0, abastecimentosRestantes.size(), 'Abastecimento avulso órfão deve ser excluído');
+
+        List<Controle_Horas_Voo__c> placeholdersRestantes = [
+            SELECT Id FROM Controle_Horas_Voo__c WHERE Id = :placeholderOrfao.Id
+        ];
+        System.assertEquals(0, placeholdersRestantes.size(), 'Placeholder órfão deve ser excluído junto com o abastecimento');
+    }
+
+    /**
+     * Com Editado_Manualmente__c = true, o par (abastecimento + placeholder) deve ser
+     * preservado mesmo que o avulso tenha sumido do Planeit.
+     */
+    @IsTest
+    static void testSincronizarPreservaAbastecimentoAvulsoProtegido() {
+        // Arrange: avulso já sincronizado anteriormente, protegido por edição manual
+        Test.setMock(HttpCalloutMock.class, new AbastecimentosAvulsosVazioMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        Controle_Horas_Voo__c placeholderProtegido = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Tipo__c = 'AB',
+            TOT__c = 0,
+            Horas_Voo__c = 0,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 15)
+        );
+        insert placeholderProtegido;
+
+        Abastecimento__c abProtegido = new Abastecimento__c(
+            Voo__c = placeholderProtegido.Id,
+            Id_Abastecimento_Planeit__c = 39760,
+            Data_Voo__c = Date.newInstance(2025, 10, 15),
+            Quantidade__c = 999,
+            Custo_Unitario__c = 1,
+            Custo_Total__c = 999,
+            Editado_Manualmente__c = true
+        );
+        insert abProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso mesmo sem o avulso');
+
+        List<Abastecimento__c> abastecimentosRestantes = [
+            SELECT Id FROM Abastecimento__c WHERE Id_Abastecimento_Planeit__c = 39760
+        ];
+        System.assertEquals(1, abastecimentosRestantes.size(), 'Abastecimento avulso protegido não deve ser excluído');
+
+        List<Controle_Horas_Voo__c> placeholdersRestantes = [
+            SELECT Id FROM Controle_Horas_Voo__c WHERE Id = :placeholderProtegido.Id
+        ];
+        System.assertEquals(1, placeholdersRestantes.size(), 'Placeholder do abastecimento protegido não deve ser excluído');
+    }
+
+    /**
+     * Uma falha (não-200) ao consultar /aeronave/abastecimentos não deve derrubar a
+     * sincronização de voos e, principalmente, não deve ser interpretada como "o avulso
+     * sumiu do Planeit" - avulsos já sincronizados devem ser preservados nesse ciclo
+     * (fail-safe: sem uma leitura confiável do Planeit, nada é excluído).
+     */
+    @IsTest
+    static void testFalhaAoBuscarAvulsosNaoExcluiExistentes() {
+        // Arrange: avulso já sincronizado anteriormente; mock não trata /aeronave/abastecimentos
+        // (resposta sem status 200), simulando uma falha transitória de callout
+        Test.setMock(HttpCalloutMock.class, new EmptyVoosMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        Controle_Horas_Voo__c placeholderExistente = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Tipo__c = 'AB',
+            TOT__c = 0,
+            Horas_Voo__c = 0,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 15)
+        );
+        insert placeholderExistente;
+
+        Abastecimento__c abExistente = new Abastecimento__c(
+            Voo__c = placeholderExistente.Id,
+            Id_Abastecimento_Planeit__c = 39760,
+            Data_Voo__c = Date.newInstance(2025, 10, 15),
+            Quantidade__c = 999,
+            Custo_Unitario__c = 1,
+            Custo_Total__c = 999
+        );
+        insert abExistente;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Sync de voos deve ter sucesso mesmo com falha ao buscar avulsos');
+
+        List<Abastecimento__c> abastecimentosRestantes = [
+            SELECT Id FROM Abastecimento__c WHERE Id_Abastecimento_Planeit__c = 39760
+        ];
+        System.assertEquals(1, abastecimentosRestantes.size(),
+            'Avulso não deve ser excluído quando a busca de avulsos falhar (fail-safe)');
+
+        List<Controle_Horas_Voo__c> placeholdersRestantes = [
+            SELECT Id FROM Controle_Horas_Voo__c WHERE Id = :placeholderExistente.Id
+        ];
+        System.assertEquals(1, placeholdersRestantes.size(),
+            'Placeholder não deve ser excluído quando a busca de avulsos falhar (fail-safe)');
     }
 }

@@ -28,6 +28,7 @@ public without sharing class PlaneitAPIService {
     private static final String NAMED_CREDENTIAL = 'callout:Planeit_API';
     private static final String LOGIN_ENDPOINT = '/login';
     private static final String VOOS_ENDPOINT = '/aeronave/voos';
+    private static final String ABASTECIMENTOS_ENDPOINT = '/aeronave/abastecimentos';
     private static final String INSPECOES_ENDPOINT = '/aeronave/inspecoes';
     private static final String TOTAIS_ENDPOINT = '/aeronave/totais';
     private static final Integer TIMEOUT_SEGUNDOS = 120;
@@ -127,6 +128,40 @@ public without sharing class PlaneitAPIService {
         public String observacoes;
     }
     
+    /**
+     * Response da API dedicada de Abastecimentos (inclui avulsos sem voo associado)
+     */
+    private class AbastecimentosResponse {
+        public Integer codigo;
+        public String mensagem;
+        public String metodo;
+        public List<AbastecimentoAvulsoData> data;
+    }
+
+    /**
+     * Dados de abastecimento retornados pelo endpoint dedicado /aeronave/abastecimentos.
+     * Diferente de AbastecimentoData (aninhado na resposta de voos), os valores
+     * numéricos vêm como String (ex: "999.00"), por isso a classe é separada.
+     */
+    private class AbastecimentoAvulsoData {
+        public Integer id;
+        public Integer idVoo;
+        public Integer idAeronave;
+        public String dataAbastecimento;
+        public String horaAbastecimento;
+        public Integer status;
+        public String localAbastecimento;
+        public String origemDestino;
+        public String tipoAbastecimento;
+        public String quantidade;
+        public String unidade;
+        public String custoUnidade;
+        public String custoTotal;
+        public String codigoMoeda;
+        public String documentoReferencia;
+        public String observacoes;
+    }
+
     /**
      * Response da API de Inspeções
      */
@@ -305,8 +340,8 @@ public without sharing class PlaneitAPIService {
             return criarRespostaErro('Falha na autenticação com o Planeit', 'AUTENTICACAO', true);
         }
         
-        // VALIDAÇÃO: Verificar limite de callouts (2 por aeronave: totais + voos, mais 1 de autenticação)
-        Integer calloutsNecessarios = 1 + (idsAeronavesPlaneit.size() * 2);
+        // VALIDAÇÃO: Verificar limite de callouts (3 por aeronave: totais + voos + abastecimentos avulsos, mais 1 de autenticação)
+        Integer calloutsNecessarios = 1 + (idsAeronavesPlaneit.size() * 3);
         if (calloutsNecessarios > MAX_CALLOUTS) {
             return criarRespostaErro(
                 'Limite de consultas excedido para ' + idsAeronavesPlaneit.size() + ' aeronaves',
@@ -345,7 +380,55 @@ public without sharing class PlaneitAPIService {
         } catch (PlaneitSyncException e) {
             return criarRespostaErro(e.getMessage(), 'API', true);
         }
-        
+
+        // FASE 2.5: BUSCAR E FILTRAR ABASTECIMENTOS AVULSOS (SEM VOO) DE TODAS AS AERONAVES
+        // Falha aqui não aborta a sincronização de voos (já concluída na FASE 2) - apenas
+        // ignora avulsos da aeronave afetada nesse ciclo (será retentado no próximo sync).
+        // todosIdsAbastecimentosAvulsosAPI guarda TODOS os ids retornados (qualquer data), usado
+        // para provar que um avulso ainda existe no Planeit mesmo que sua data tenha mudado para
+        // fora da janela do sync - evita exclusão indevida na FASE 4.3.
+        // aeronavesComFalhaAvulsos marca aeronaves cuja busca falhou: SEM essa informação não
+        // sabemos se um avulso já sincronizado ainda existe no Planeit, então a FASE 4.3 NUNCA
+        // exclui avulsos dessas aeronaves nesse ciclo (evita apagar dados por uma falha transitória).
+        Map<String, List<AbastecimentoAvulsoData>> avulsosPorAeronave = new Map<String, List<AbastecimentoAvulsoData>>();
+        Set<Integer> todosIdsAbastecimentosAvulsosAPI = new Set<Integer>();
+        Set<String> aeronavesComFalhaAvulsos = new Set<String>();
+
+        for (Integer i = 0; i < idsAeronavesPlaneit.size(); i++) {
+            Integer idAeronave = idsAeronavesPlaneit[i].intValue();
+            String aeronaveRecordId = idsAeronavesRecords[i];
+            List<AbastecimentoAvulsoData> avulsosAeronave = new List<AbastecimentoAvulsoData>();
+
+            try {
+                for (AbastecimentoAvulsoData avData : buscarAbastecimentosAPI(token, idAeronave)) {
+                    if (avData.idVoo != null) {
+                        continue; // já tratado via abastecimentos aninhados em /voos
+                    }
+                    todosIdsAbastecimentosAvulsosAPI.add(avData.id);
+
+                    if (String.isBlank(avData.dataAbastecimento)) {
+                        continue;
+                    }
+                    Date dataAvulso;
+                    try {
+                        dataAvulso = Date.valueOf(avData.dataAbastecimento);
+                    } catch (Exception e) {
+                        System.debug(LoggingLevel.WARN, 'Data inválida em abastecimento avulso ' + avData.id + ': ' + avData.dataAbastecimento);
+                        continue;
+                    }
+                    if (dataAvulso < dataInicio || dataAvulso > dataFim) {
+                        continue; // fora da janela deste sync; será pego em um range maior
+                    }
+                    avulsosAeronave.add(avData);
+                }
+            } catch (Exception e) {
+                System.debug(LoggingLevel.ERROR, 'Erro ao buscar abastecimentos avulsos da aeronave ' + idAeronave + ': ' + e.getMessage());
+                aeronavesComFalhaAvulsos.add(aeronaveRecordId);
+            }
+
+            avulsosPorAeronave.put(aeronaveRecordId, avulsosAeronave);
+        }
+
         // FASE 3: COLETAR TODOS OS NOMES DE PILOTOS, OPERADORES E IDS DE ABASTECIMENTOS
         Set<String> todosNomesPilotos = new Set<String>();
         Set<String> todosNomesOperadores = new Set<String>();
@@ -372,7 +455,14 @@ public without sharing class PlaneitAPIService {
                 }
             }
         }
-        
+
+        // Incluir avulsos (dentro da janela do sync) na mesma query de dedup de abastecimentos
+        for (List<AbastecimentoAvulsoData> avulsosAeronave : avulsosPorAeronave.values()) {
+            for (AbastecimentoAvulsoData avData : avulsosAeronave) {
+                todosIdsAbastecimentosAPI.add(avData.id);
+            }
+        }
+
         // UMA query para todos os pilotos e operadores
         Map<String, Id> empregadosPorNome = buscarEmpregadosEmMassa(todosNomesPilotos, todosNomesOperadores);
         
@@ -398,11 +488,13 @@ public without sharing class PlaneitAPIService {
         }
         
         // FASE 4.0: BUSCAR TODOS OS ABASTECIMENTOS EXISTENTES
+        // Voo__c e Voo__r.Editado_Manualmente__c são necessários para avulsos: permitem
+        // localizar o placeholder AB já criado e verificar se ele está protegido.
         Map<Integer, Abastecimento__c> todosAbastecimentosExistentes = new Map<Integer, Abastecimento__c>();
         if (!todosIdsAbastecimentosAPI.isEmpty()) {
             for (Abastecimento__c abExist : [
-                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c
-                FROM Abastecimento__c 
+                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Voo__c, Voo__r.Editado_Manualmente__c
+                FROM Abastecimento__c
                 WHERE Id_Abastecimento_Planeit__c IN :todosIdsAbastecimentosAPI
             ]) {
                 todosAbastecimentosExistentes.put(Integer.valueOf(abExist.Id_Abastecimento_Planeit__c), abExist);
@@ -466,7 +558,45 @@ public without sharing class PlaneitAPIService {
                 }
             }
         }
-        
+
+        // FASE 4.3: IDENTIFICAR ABASTECIMENTOS AVULSOS (SEM VOO) PARA DELETAR
+        // Regra: abastecimento avulso já sincronizado (Id_Abastecimento_Planeit__c preenchido)
+        // cujo placeholder AB (Tipo__c='AB', Id_Voo_Planeit__c=null) não existe mais no Planeit.
+        // O par (abastecimento + placeholder) só é excluído se nenhum dos dois estiver protegido.
+        // Aeronaves com falha na busca de avulsos (FASE 2.5) ficam de fora: sem uma leitura
+        // confiável do Planeit, não há como provar que o registro realmente sumiu.
+        Set<String> idsAeronavesParaExclusaoAvulsos = new Set<String>(idsAeronavesSet);
+        idsAeronavesParaExclusaoAvulsos.removeAll(aeronavesComFalhaAvulsos);
+
+        Set<Id> idsPlaceholdersParaDeletar = new Set<Id>();
+        if (!idsAeronavesParaExclusaoAvulsos.isEmpty()) {
+            for (Abastecimento__c abAvulsoSF : [
+                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Voo__c, Voo__r.Editado_Manualmente__c
+                FROM Abastecimento__c
+                WHERE Voo__r.Aeronave__c IN :idsAeronavesParaExclusaoAvulsos
+                AND Voo__r.Tipo__c = 'AB'
+                AND Voo__r.Id_Voo_Planeit__c = null
+                AND Voo__r.Data_do_Voo__c >= :dataInicio
+                AND Voo__r.Data_do_Voo__c <= :dataFim
+                AND Id_Abastecimento_Planeit__c != null
+            ]) {
+                Integer idAvulsoPlaneit = Integer.valueOf(abAvulsoSF.Id_Abastecimento_Planeit__c);
+                if (todosIdsAbastecimentosAvulsosAPI.contains(idAvulsoPlaneit)) {
+                    continue; // ainda existe no Planeit (mesmo que fora da janela por data)
+                }
+                if (abAvulsoSF.Editado_Manualmente__c || abAvulsoSF.Voo__r.Editado_Manualmente__c) {
+                    // Protegido: usuário editou manualmente o abastecimento ou o placeholder
+                    System.debug('🔒 Abastecimento avulso preservado (editado manualmente): Id=' + abAvulsoSF.Id);
+                    continue;
+                }
+                abastecimentosParaDeletar.add(abAvulsoSF);
+                idsPlaceholdersParaDeletar.add(abAvulsoSF.Voo__c);
+            }
+        }
+        for (Id placeholderId : idsPlaceholdersParaDeletar) {
+            voosParaDeletar.add(new Controle_Horas_Voo__c(Id = placeholderId));
+        }
+
         // FASE 5: PROCESSAR TODOS OS VOOS DE TODAS AS AERONAVES
         List<Controle_Horas_Voo__c> todosVoosParaCriar = new List<Controle_Horas_Voo__c>();
         List<Controle_Horas_Voo__c> todosVoosParaAtualizar = new List<Controle_Horas_Voo__c>();
@@ -474,16 +604,17 @@ public without sharing class PlaneitAPIService {
         List<Abastecimento__c> todosAbastecimentosParaAtualizar = new List<Abastecimento__c>();
         // Mapa para resolver abastecimentos de voos novos após o insert (VooData → lista de AbastecimentoData)
         Map<Integer, List<AbastecimentoData>> abastNovosPorIndexVooNovo = new Map<Integer, List<AbastecimentoData>>();
-        
+        // Mapa para resolver abastecimento avulso do placeholder AB recém-criado após o insert
+        Map<Integer, AbastecimentoAvulsoData> abastNovosAvulsosPorIndexVooNovo = new Map<Integer, AbastecimentoAvulsoData>();
+
         for (Integer i = 0; i < idsAeronavesPlaneit.size(); i++) {
             Integer idAeronave = idsAeronavesPlaneit[i].intValue();
             String aeronaveRecordId = idsAeronavesRecords[i];
             List<VooData> voos = voosPorAeronave.get(idAeronave);
-            
-            if (voos == null || voos.isEmpty()) {
-                continue;
+            if (voos == null) {
+                voos = new List<VooData>();
             }
-            
+
             for (VooData vooData : voos) {
                 Controle_Horas_Voo__c vooRecord;
                 Boolean isUpdate = false;
@@ -576,8 +707,43 @@ public without sharing class PlaneitAPIService {
                     }
                 }
             }
+
+            // Processar abastecimentos avulsos (sem voo) desta aeronave: cada um vira um
+            // placeholder Controle_Horas_Voo__c (Tipo__c='AB') + seu Abastecimento__c filho,
+            // já que Abastecimento__c.Voo__c é obrigatório.
+            List<AbastecimentoAvulsoData> avulsosAeronave = avulsosPorAeronave.get(aeronaveRecordId);
+            if (avulsosAeronave != null) {
+                for (AbastecimentoAvulsoData avData : avulsosAeronave) {
+                    if (todosAbastecimentosExistentes.containsKey(avData.id)) {
+                        Abastecimento__c existente = todosAbastecimentosExistentes.get(avData.id);
+                        if (existente.Editado_Manualmente__c || existente.Voo__r.Editado_Manualmente__c) {
+                            System.debug('🔒 Abastecimento avulso ignorado (editado manualmente): Id_Abastecimento_Planeit__c=' + avData.id);
+                            continue;
+                        }
+                        Abastecimento__c abAtualizado = construirAbastecimentoAvulso(avData, existente.Voo__c, todosAbastecimentosExistentes);
+                        todosAbastecimentosParaAtualizar.add(abAtualizado);
+                    } else {
+                        Controle_Horas_Voo__c placeholder = new Controle_Horas_Voo__c();
+                        placeholder.Aeronave__c = aeronaveRecordId;
+                        placeholder.Tipo__c = 'AB';
+                        placeholder.TOT__c = 0;
+                        placeholder.Horas_Voo__c = 0;
+                        if (String.isNotBlank(avData.dataAbastecimento)) {
+                            try {
+                                placeholder.Data_do_Voo__c = Date.valueOf(avData.dataAbastecimento);
+                            } catch (Exception e) {
+                                System.debug(LoggingLevel.WARN, 'Data inválida em abastecimento avulso ' + avData.id + ': ' + avData.dataAbastecimento);
+                            }
+                        }
+
+                        Integer indexPlaceholderNovo = todosVoosParaCriar.size();
+                        todosVoosParaCriar.add(placeholder);
+                        abastNovosAvulsosPorIndexVooNovo.put(indexPlaceholderNovo, avData);
+                    }
+                }
+            }
         }
-        
+
         // FASE 6: DML ÚNICO PARA VOOS, ABASTECIMENTOS E HORAS TOTAIS
         Integer totalCriados = 0;
         Integer totalAtualizados = 0;
@@ -617,7 +783,15 @@ public without sharing class PlaneitAPIService {
                     todosAbastecimentosParaCriar.add(abRecord);
                 }
             }
-            
+
+            // 3.1 Resolver abastecimentos avulsos dos placeholders AB recém-criados (agora têm Id)
+            for (Integer idx : abastNovosAvulsosPorIndexVooNovo.keySet()) {
+                Id placeholderNovoId = todosVoosParaCriar[idx].Id;
+                AbastecimentoAvulsoData avData = abastNovosAvulsosPorIndexVooNovo.get(idx);
+                Abastecimento__c abRecord = construirAbastecimentoAvulso(avData, placeholderNovoId, todosAbastecimentosExistentes);
+                todosAbastecimentosParaCriar.add(abRecord);
+            }
+
             // 4. Inserir TODOS os novos abastecimentos de UMA VEZ
             if (!todosAbastecimentosParaCriar.isEmpty()) {
                 insert todosAbastecimentosParaCriar;
@@ -720,10 +894,71 @@ public without sharing class PlaneitAPIService {
                 System.debug(LoggingLevel.WARN, 'Erro ao converter data abastecimento: ' + abData.dataVoo);
             }
         }
-        
+
         return ab;
     }
-    
+
+    /**
+     * @description Constrói ou atualiza um Abastecimento__c avulso (sem voo) a partir do
+     * endpoint dedicado /aeronave/abastecimentos. O pai é sempre um Controle_Horas_Voo__c
+     * placeholder (Tipo__c = 'AB'), já que Abastecimento__c.Voo__c é obrigatório.
+     * @param avData Dados de abastecimento avulso vindos da API
+     * @param vooId Id do Controle_Horas_Voo__c placeholder pai
+     * @param existentes Mapa de abastecimentos já existentes no SF
+     * @return Abastecimento__c preenchido (com ou sem Id, dependendo se é insert ou update)
+     */
+    private static Abastecimento__c construirAbastecimentoAvulso(
+        AbastecimentoAvulsoData avData,
+        Id vooId,
+        Map<Integer, Abastecimento__c> existentes
+    ) {
+        Abastecimento__c ab;
+        if (existentes.containsKey(avData.id)) {
+            ab = existentes.get(avData.id);
+        } else {
+            ab = new Abastecimento__c();
+            ab.Id_Abastecimento_Planeit__c = avData.id;
+            ab.Voo__c = vooId;
+        }
+
+        ab.Local__c                = avData.localAbastecimento;
+        ab.Origem_Destino__c       = avData.origemDestino;
+        ab.Tipo_Combustivel__c     = avData.tipoAbastecimento;
+        ab.Quantidade__c           = converterStringParaDecimal(avData.quantidade);
+        ab.Unidade__c              = avData.unidade;
+        ab.Custo_Unitario__c       = converterStringParaDecimal(avData.custoUnidade);
+        ab.Custo_Total__c          = converterStringParaDecimal(avData.custoTotal);
+        ab.Documento_Referencia__c = avData.documentoReferencia;
+        ab.Observacoes__c          = avData.observacoes;
+
+        if (String.isNotBlank(avData.dataAbastecimento)) {
+            try {
+                ab.Data_Voo__c = Date.valueOf(avData.dataAbastecimento);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN, 'Erro ao converter data abastecimento avulso: ' + avData.dataAbastecimento);
+            }
+        }
+
+        return ab;
+    }
+
+    /**
+     * @description Converte String numérica vinda da API (ex: "999.00") para Decimal
+     * @param value String numérica
+     * @return Decimal ou null se vazio/inválido
+     */
+    private static Decimal converterStringParaDecimal(String value) {
+        if (String.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Decimal.valueOf(value);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, 'Erro ao converter valor decimal "' + value + '": ' + e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * @description Busca voos de uma aeronave via API
      * @param token Token Bearer válido
@@ -780,6 +1015,57 @@ public without sharing class PlaneitAPIService {
             System.debug(LoggingLevel.ERROR, 'Exceção ao buscar voos aeronave ' + idAeronave + ': ' + e.getMessage() + '\n' + e.getStackTraceString());
             throw new PlaneitSyncException(
                 'Resposta inválida ao consultar voos da aeronave ' + idAeronave
+            );
+        }
+    }
+
+    /**
+     * @description Busca todos os abastecimentos de uma aeronave via API dedicada.
+     * Diferente de buscarVoosAPI, retorna tanto abastecimentos vinculados a voos
+     * quanto avulsos (idVoo nulo) - o chamador é responsável por filtrar.
+     * @param token Token Bearer válido
+     * @param idAeronave ID da aeronave no Planeit
+     * @return Lista de AbastecimentoAvulsoData da API
+     */
+    private static List<AbastecimentoAvulsoData> buscarAbastecimentosAPI(String token, Integer idAeronave) {
+        try {
+            String endpoint = NAMED_CREDENTIAL + ABASTECIMENTOS_ENDPOINT + '?idAeronave=' + idAeronave;
+
+            HttpRequest httpReq = new HttpRequest();
+            httpReq.setEndpoint(endpoint);
+            httpReq.setMethod('GET');
+            httpReq.setHeader('Authorization', 'Bearer ' + token); // NOPMD - endpoint uses a Named Credential.
+            httpReq.setHeader('Accept', 'application/json');
+            httpReq.setTimeout(TIMEOUT_SEGUNDOS * 1000);
+
+            Http http = new Http();
+            HttpResponse res = http.send(httpReq);
+
+            if (res.getStatusCode() != 200) {
+                throw new PlaneitSyncException(
+                    'Falha ao consultar abastecimentos da aeronave ' + idAeronave +
+                    ' (HTTP ' + res.getStatusCode() + ')'
+                );
+            }
+
+            AbastecimentosResponse abastecimentosRes = (AbastecimentosResponse) JSON.deserialize(
+                res.getBody(),
+                AbastecimentosResponse.class
+            );
+
+            if (abastecimentosRes == null || abastecimentosRes.codigo != 200) {
+                throw new PlaneitSyncException(
+                    'Resposta inválida ao consultar abastecimentos da aeronave ' + idAeronave
+                );
+            }
+
+            return abastecimentosRes.data == null ? new List<AbastecimentoAvulsoData>() : abastecimentosRes.data;
+        } catch (PlaneitSyncException e) {
+            throw e;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR, 'Exceção ao buscar abastecimentos aeronave ' + idAeronave + ': ' + e.getMessage() + '\n' + e.getStackTraceString());
+            throw new PlaneitSyncException(
+                'Resposta inválida ao consultar abastecimentos da aeronave ' + idAeronave
             );
         }
     }
