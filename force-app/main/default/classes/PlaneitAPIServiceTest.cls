@@ -508,6 +508,120 @@ private class PlaneitAPIServiceTest {
         }
     }
 
+    /**
+     * Mock com piloto (assinatura) e operador (campoCustomizado1) que não correspondem
+     * a nenhum Empregado__c cadastrado nos testes - simula pessoas externas/terceirizadas.
+     */
+    private class PilotoOperadorExternoMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            String endpoint = req.getEndpoint();
+
+            if (endpoint.containsIgnoreCase('login')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": {"access_token": "TEST", "token_type": "Bearer"}}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/voos')) {
+                res.setStatusCode(200);
+                res.setBody('{' +
+                    '"codigo": 200,' +
+                    '"data": [{' +
+                        '"idVoo": 94611,' +
+                        '"idAeronave": 1599,' +
+                        '"matricula": "PPBAP",' +
+                        '"dataVoo": "2025-10-21",' +
+                        '"localDecolagem": "SBRP",' +
+                        '"localPouso": "SBPA",' +
+                        '"horarioPartida": "08:30:00",' +
+                        '"horarioCorteMotores": "10:45:00",' +
+                        '"naturezaVoo": "TR",' +
+                        '"campoCustomizado1": "Fulano Terceirizado Externo",' +
+                        '"campoCustomizado3": "Teste piloto externo",' +
+                        '"campoCustomizado4": null,' +
+                        '"horasVooEtapa": "02:15:00",' +
+                        '"horasVooEtapaDecimal": 2.25,' +
+                        '"assinaturas": [{' +
+                            '"nome": "Carlos",' +
+                            '"sobrenome": "Andrade Voador",' +
+                            '"tipoAssinatura": "Piloto em comando"' +
+                        '}],' +
+                        '"tripulacao": [],' +
+                        '"abastecimentos": []' +
+                    '}]' +
+                '}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/abastecimentos')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": []}');
+            }
+            return res;
+        }
+    }
+
+    /**
+     * Mock reproduzindo os valores reais da lista "Operador:" (campoCustomizado1) do PlaneIT:
+     * - voo 90001: "Outro - Especificar em Extras" + nome real no campo "Extras" (campoCustomizado4)
+     * - voo 90002: "N/A" (translado sem operador a bordo)
+     * - voo 90003: "Outro - Especificar em Extras" mas com "Extras" vazio (sem operador identificável)
+     */
+    private class OperadorCamposCustomizadosMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            String endpoint = req.getEndpoint();
+
+            if (endpoint.containsIgnoreCase('login')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": {"access_token": "TEST", "token_type": "Bearer"}}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/voos')) {
+                res.setStatusCode(200);
+                res.setBody('{' +
+                    '"codigo": 200,' +
+                    '"data": [{' +
+                        '"idVoo": 90001,' +
+                        '"idAeronave": 1599,' +
+                        '"dataVoo": "2025-10-21",' +
+                        '"naturezaVoo": "SA",' +
+                        '"campoCustomizado1": "Outro - Especificar em Extras",' +
+                        '"campoCustomizado2": "Sim",' +
+                        '"campoCustomizado3": "1518_IGC",' +
+                        '"campoCustomizado4": "Gonzalo",' +
+                        '"horasVooEtapa": "01:00:00",' +
+                        '"horasVooEtapaDecimal": 1.0,' +
+                        '"assinaturas": [], "tripulacao": [], "abastecimentos": []' +
+                    '},{' +
+                        '"idVoo": 90002,' +
+                        '"idAeronave": 1599,' +
+                        '"dataVoo": "2025-10-22",' +
+                        '"naturezaVoo": "TR",' +
+                        '"campoCustomizado1": "N/A",' +
+                        '"campoCustomizado2": "Não",' +
+                        '"campoCustomizado3": "1518_IGC",' +
+                        '"campoCustomizado4": null,' +
+                        '"horasVooEtapa": "01:00:00",' +
+                        '"horasVooEtapaDecimal": 1.0,' +
+                        '"assinaturas": [], "tripulacao": [], "abastecimentos": []' +
+                    '},{' +
+                        '"idVoo": 90003,' +
+                        '"idAeronave": 1599,' +
+                        '"dataVoo": "2025-10-23",' +
+                        '"naturezaVoo": "SA",' +
+                        '"campoCustomizado1": "Outro - Especificar em Extras",' +
+                        '"campoCustomizado2": "Sim",' +
+                        '"campoCustomizado3": "1518_IGC",' +
+                        '"campoCustomizado4": null,' +
+                        '"horasVooEtapa": "01:00:00",' +
+                        '"horasVooEtapaDecimal": 1.0,' +
+                        '"assinaturas": [], "tripulacao": [], "abastecimentos": []' +
+                    '}]' +
+                '}');
+            } else if (endpoint.containsIgnoreCase('/aeronave/abastecimentos')) {
+                res.setStatusCode(200);
+                res.setBody('{"codigo": 200, "data": []}');
+            }
+            return res;
+        }
+    }
+
     // =========================================================================
     // TESTES
     // =========================================================================
@@ -1479,5 +1593,195 @@ private class PlaneitAPIServiceTest {
         ];
         System.assertEquals(1, placeholdersRestantes.size(),
             'Placeholder não deve ser excluído quando a busca de avulsos falhar (fail-safe)');
+    }
+
+    // =========================================================================
+    // TESTES PARA PILOTO/OPERADOR EXTERNO (sem Empregado__c correspondente)
+    // =========================================================================
+
+    /**
+     * Quando o nome do piloto/operador não corresponde a nenhum Empregado__c, o voo
+     * deve ser sincronizado com Piloto__c/Operador__c nulos, mas com o nome cru
+     * preservado em Piloto_Externo__c/Operador_Externo__c.
+     */
+    @IsTest
+    static void testSincronizarCapturaPilotoOperadorExterno() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new PilotoOperadorExternoMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso');
+
+        Controle_Horas_Voo__c voo = [
+            SELECT Piloto__c, Piloto_Externo__c, Operador__c, Operador_Externo__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id_Voo_Planeit__c = 94611
+        ];
+        System.assertEquals(null, voo.Piloto__c, 'Piloto não deve corresponder a nenhum empregado');
+        System.assertEquals('Carlos Andrade Voador', voo.Piloto_Externo__c, 'Nome do piloto externo deve ser preservado');
+        System.assertEquals(null, voo.Operador__c, 'Operador não deve corresponder a nenhum empregado');
+        System.assertEquals('Fulano Terceirizado Externo', voo.Operador_Externo__c, 'Nome do operador externo deve ser preservado');
+    }
+
+    /**
+     * Se a pessoa antes externa passar a existir como Empregado__c (nome batendo), um
+     * novo ciclo de sincronização deve vincular o Empregado__c e limpar a tag de externo.
+     * Simula o estado "já sincronizado como externo" via inserção direta (mesmo padrão de
+     * testAtualizarVooExistente), pois duas chamadas reais na mesma transação violariam a
+     * regra de callout após DML pendente.
+     */
+    @IsTest
+    static void testSincronizarLimpaTagExternoQuandoEmpregadoPassaAExistir() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new PilotoOperadorExternoMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        Controle_Horas_Voo__c vooExistente = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            Piloto_Externo__c = 'Carlos Andrade Voador',
+            Operador_Externo__c = 'Fulano Terceirizado Externo'
+        );
+        insert vooExistente;
+
+        // Empregados agora cadastrados com os mesmos nomes que antes eram externos
+        Empregado__c piloto = TestDataStatic.empregadoPiloto;
+        piloto.Name = 'Carlos Andrade Voador';
+        update piloto;
+
+        Empregado__c operador = TestDataStatic.empregadoOpEquipEsp;
+        operador.Name = 'Fulano Terceirizado Externo';
+        update operador;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso');
+
+        Controle_Horas_Voo__c vooAtualizado = [
+            SELECT Piloto__c, Piloto_Externo__c, Operador__c, Operador_Externo__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id = :vooExistente.Id
+        ];
+        System.assertEquals(piloto.Id, vooAtualizado.Piloto__c, 'Piloto deve ser vinculado ao empregado agora cadastrado');
+        System.assertEquals(null, vooAtualizado.Piloto_Externo__c, 'Tag de piloto externo deve ser limpa após o match');
+        System.assertEquals(operador.Id, vooAtualizado.Operador__c, 'Operador deve ser vinculado ao empregado agora cadastrado');
+        System.assertEquals(null, vooAtualizado.Operador_Externo__c, 'Tag de operador externo deve ser limpa após o match');
+    }
+
+    /**
+     * A lista "Operador:" do PlaneIT tem valores sentinela que não são nomes de pessoas:
+     * "N/A" (voo sem operador) e "Outro - Especificar em Extras" (nome real vai no campo
+     * livre "Extras" = campoCustomizado4). Nenhum dos dois pode virar nome de operador.
+     */
+    @IsTest
+    static void testResolveOperadorAPartirDosCamposCustomizados() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new OperadorCamposCustomizadosMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        System.assertEquals(true, resultados[0].sucesso, 'Deve sincronizar com sucesso');
+
+        Map<Decimal, Controle_Horas_Voo__c> voosPorIdPlaneit = new Map<Decimal, Controle_Horas_Voo__c>();
+        for (Controle_Horas_Voo__c voo : [
+            SELECT Id_Voo_Planeit__c, Operador__c, Operador_Externo__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id_Voo_Planeit__c IN (90001, 90002, 90003)
+        ]) {
+            voosPorIdPlaneit.put(voo.Id_Voo_Planeit__c, voo);
+        }
+        System.assertEquals(3, voosPorIdPlaneit.size(), 'Os 3 voos devem ser sincronizados');
+
+        // "Outro - Especificar em Extras" -> nome real vem do campo "Extras"
+        Controle_Horas_Voo__c vooComExtras = voosPorIdPlaneit.get(90001);
+        System.assertEquals(null, vooComExtras.Operador__c, 'Gonzalo não é empregado cadastrado');
+        System.assertEquals('Gonzalo', vooComExtras.Operador_Externo__c,
+            'O nome do operador deve vir do campo "Extras", não do texto da lista de seleção');
+
+        // "N/A" -> voo sem operador, não é nome de pessoa
+        Controle_Horas_Voo__c vooSemOperador = voosPorIdPlaneit.get(90002);
+        System.assertEquals(null, vooSemOperador.Operador__c, 'Voo N/A não deve ter operador');
+        System.assertEquals(null, vooSemOperador.Operador_Externo__c,
+            '"N/A" não pode ser gravado como nome de operador externo');
+
+        // "Outro - Especificar em Extras" sem preencher "Extras" -> nada a exibir
+        Controle_Horas_Voo__c vooExtrasVazio = voosPorIdPlaneit.get(90003);
+        System.assertEquals(null, vooExtrasVazio.Operador__c, 'Sem "Extras" preenchido não há operador');
+        System.assertEquals(null, vooExtrasVazio.Operador_Externo__c,
+            '"Outro - Especificar em Extras" não pode ser gravado como nome de operador externo');
+    }
+
+    /**
+     * Quando o valor da lista "Operador:" é o nome de um empregado cadastrado, o vínculo
+     * normal (lookup) deve continuar funcionando - o campo "Extras" não interfere.
+     */
+    @IsTest
+    static void testOperadorInternoContinuaSendoVinculado() {
+        // Arrange
+        Test.setMock(HttpCalloutMock.class, new MultiEndpointMock());
+        Empregado__c piloto = TestDataStatic.empregadoPiloto;
+        Empregado__c operador = TestDataStatic.empregadoOpEquipEsp;
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        // Act
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        // Assert
+        Controle_Horas_Voo__c voo = [
+            SELECT Operador__c, Operador_Externo__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id_Voo_Planeit__c = 94611
+        ];
+        System.assertEquals(operador.Id, voo.Operador__c, 'Operador interno deve continuar sendo vinculado');
+        System.assertEquals(null, voo.Operador_Externo__c, 'Operador interno não deve receber tag de externo');
     }
 }

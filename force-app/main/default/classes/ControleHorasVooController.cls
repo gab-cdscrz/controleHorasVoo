@@ -1138,8 +1138,8 @@ public without sharing class ControleHorasVooController {
             // Buscar controles do mês (incluindo abastecimentos para visualização)
             for (Controle_Horas_Voo__c controle : [
                 SELECT Id, Name, Data_do_Voo__c,
-                Piloto__c, Piloto__r.Name,
-                Operador__c, Operador__r.Name,
+                Piloto__c, Piloto__r.Name, Piloto_Externo__c,
+                Operador__c, Operador__r.Name, Operador_Externo__c,
                 Aeronave__c, Aeronave__r.Name,
                 Horas_Voo__c, Descricao__c, Tipo__c,
                 ARR__c, DEP__c, Acionamento__c, Corte__c, TOT__c,

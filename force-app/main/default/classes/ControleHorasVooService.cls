@@ -134,7 +134,9 @@ public without sharing class ControleHorasVooService {
         List<String> errors = new List<String>();
         Controle_Horas_Voo__c flight = request.controle;
         if (flight.Aeronave__c == null) errors.add('A aeronave é obrigatória.');
-        if (flight.Piloto__c == null) errors.add('O piloto é obrigatório.');
+        if (flight.Piloto__c == null && String.isBlank(flight.Piloto_Externo__c)) {
+            errors.add('O piloto é obrigatório.');
+        }
         if (flight.Data_do_Voo__c == null) errors.add('A data do voo é obrigatória.');
         if (request.somenteAbastecimento != true && String.isBlank(flight.Tipo__c)) {
             errors.add('O tipo do voo é obrigatório.');
@@ -263,7 +265,9 @@ public without sharing class ControleHorasVooService {
                 Id = isUpdate ? flight.Id : null,
                 Aeronave__c = flight.Aeronave__c,
                 Piloto__c = flight.Piloto__c,
+                Piloto_Externo__c = flight.Piloto_Externo__c,
                 Operador__c = flight.Operador__c,
+                Operador_Externo__c = flight.Operador_Externo__c,
                 Data_do_Voo__c = flight.Data_do_Voo__c,
                 Tipo__c = flight.Tipo__c,
                 Descricao__c = flight.Descricao__c,

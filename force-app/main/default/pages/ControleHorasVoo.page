@@ -207,9 +207,19 @@
                                                                 <apex:outputPanel rendered="{!dia.temVoo}">
                                                                     <apex:repeat value="{!dia.controles}" var="controle">
                                                                         <div class="voo-info">
-                                                                            <div class="piloto-nome" title="Piloto: {!controle.controle.Piloto__r.Name}">{!controle.controle.Piloto__r.Name}</div>
-                                                                            <apex:outputPanel rendered="{!NOT(ISBLANK(controle.controle.Operador__r.Name))}">
-                                                                                <div class="operador" title="Operador: {!controle.controle.Operador__r.Name}">{!controle.controle.Operador__r.Name}</div>
+                                                                            <div class="piloto-nome" title="Piloto: {!IF(ISBLANK(controle.controle.Piloto__r.Name), controle.controle.Piloto_Externo__c, controle.controle.Piloto__r.Name)}">
+                                                                                <apex:outputText value="{!IF(ISBLANK(controle.controle.Piloto__r.Name), controle.controle.Piloto_Externo__c, controle.controle.Piloto__r.Name)}"/>
+                                                                                <apex:outputPanel rendered="{!AND(ISBLANK(controle.controle.Piloto__r.Name), NOT(ISBLANK(controle.controle.Piloto_Externo__c)))}">
+                                                                                    <span class="badge-externo">externo</span>
+                                                                                </apex:outputPanel>
+                                                                            </div>
+                                                                            <apex:outputPanel rendered="{!OR(NOT(ISBLANK(controle.controle.Operador__r.Name)), NOT(ISBLANK(controle.controle.Operador_Externo__c)))}">
+                                                                                <div class="operador" title="Operador: {!IF(ISBLANK(controle.controle.Operador__r.Name), controle.controle.Operador_Externo__c, controle.controle.Operador__r.Name)}">
+                                                                                    <apex:outputText value="{!IF(ISBLANK(controle.controle.Operador__r.Name), controle.controle.Operador_Externo__c, controle.controle.Operador__r.Name)}"/>
+                                                                                    <apex:outputPanel rendered="{!AND(ISBLANK(controle.controle.Operador__r.Name), NOT(ISBLANK(controle.controle.Operador_Externo__c)))}">
+                                                                                        <span class="badge-externo">externo</span>
+                                                                                    </apex:outputPanel>
+                                                                                </div>
                                                                             </apex:outputPanel>
                                                                             <div class="horas-voo" title="Horas de voo">
                                                                                 <span>
@@ -438,7 +448,10 @@
                                                                 <apex:outputPanel rendered="{!controlesDetalhes.size > 1}">
                                                                     <div class="voo-cabecalho-modal">
                                                                         <p class="voo-cabecalho-titulo">
-                                                                            <apex:outputText value="{!IF(ISBLANK(controleItem.Piloto__r.Name), 'Piloto não informado', controleItem.Piloto__r.Name)}"/>
+                                                                            <apex:outputText value="{!IF(ISBLANK(controleItem.Piloto__r.Name), IF(ISBLANK(controleItem.Piloto_Externo__c), 'Piloto não informado', controleItem.Piloto_Externo__c), controleItem.Piloto__r.Name)}"/>
+                                                                            <apex:outputPanel rendered="{!AND(ISBLANK(controleItem.Piloto__r.Name), NOT(ISBLANK(controleItem.Piloto_Externo__c)))}">
+                                                                                <span class="badge-externo">externo</span>
+                                                                            </apex:outputPanel>
                                                                         </p>
                                                                         <p class="voo-cabecalho-sub">
                                                                             <apex:outputText value="{0, number, #,##0.0}"><apex:param value="{!controleItem.Horas_voo__c}"/></apex:outputText> h de voo
@@ -481,14 +494,20 @@
                                                                         </div>
                                                                         <div class="detalhe-item">
                                                                             <label>Piloto</label>
-                                                                            <span class="{!IF(ISBLANK(controleItem.Piloto__r.Name), 'detalhe-valor-vazio', '')}">
-                                                                                <apex:outputText value="{!IF(ISBLANK(controleItem.Piloto__r.Name), 'Não preenchido', controleItem.Piloto__r.Name)}"/>
+                                                                            <span class="{!IF(AND(ISBLANK(controleItem.Piloto__r.Name), ISBLANK(controleItem.Piloto_Externo__c)), 'detalhe-valor-vazio', '')}">
+                                                                                <apex:outputText value="{!IF(ISBLANK(controleItem.Piloto__r.Name), IF(ISBLANK(controleItem.Piloto_Externo__c), 'Não preenchido', controleItem.Piloto_Externo__c), controleItem.Piloto__r.Name)}"/>
+                                                                                <apex:outputPanel rendered="{!AND(ISBLANK(controleItem.Piloto__r.Name), NOT(ISBLANK(controleItem.Piloto_Externo__c)))}">
+                                                                                    <span class="badge-externo">externo</span>
+                                                                                </apex:outputPanel>
                                                                             </span>
                                                                         </div>
                                                                         <div class="detalhe-item">
                                                                             <label>Operador</label>
-                                                                            <span class="{!IF(ISBLANK(controleItem.Operador__r.Name), 'detalhe-valor-vazio', '')}">
-                                                                                <apex:outputText value="{!IF(ISBLANK(controleItem.Operador__r.Name), 'Não preenchido', controleItem.Operador__r.Name)}"/>
+                                                                            <span class="{!IF(AND(ISBLANK(controleItem.Operador__r.Name), ISBLANK(controleItem.Operador_Externo__c)), 'detalhe-valor-vazio', '')}">
+                                                                                <apex:outputText value="{!IF(ISBLANK(controleItem.Operador__r.Name), IF(ISBLANK(controleItem.Operador_Externo__c), 'Não preenchido', controleItem.Operador_Externo__c), controleItem.Operador__r.Name)}"/>
+                                                                                <apex:outputPanel rendered="{!AND(ISBLANK(controleItem.Operador__r.Name), NOT(ISBLANK(controleItem.Operador_Externo__c)))}">
+                                                                                    <span class="badge-externo">externo</span>
+                                                                                </apex:outputPanel>
                                                                             </span>
                                                                         </div>
                                                                     </div>
@@ -941,9 +960,13 @@
                                                                      rendered="{!AND(camposHabilitados, !registroSalvo)}">
                                                         <apex:selectOptions value="{!pilotoOptions}"/>
                                                     </apex:selectList>
-                                                    <apex:outputText value="{!controleHoras.Piloto__r.Name}" 
-                                                                     styleClass="form-control readonly-field readonly-display"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    <apex:outputPanel styleClass="form-control readonly-field readonly-display"
+                                                                      rendered="{!AND(camposHabilitados, registroSalvo)}">
+                                                                        <apex:outputText value="{!IF(ISBLANK(controleHoras.Piloto__r.Name), controleHoras.Piloto_Externo__c, controleHoras.Piloto__r.Name)}"/>
+                                                                        <apex:outputPanel rendered="{!AND(ISBLANK(controleHoras.Piloto__r.Name), NOT(ISBLANK(controleHoras.Piloto_Externo__c)))}">
+                                                                            <span class="badge-externo">externo</span>
+                                                                        </apex:outputPanel>
+                                                                    </apex:outputPanel>
                                                     <apex:inputText value="{!mensagemCampoDesabilitado}" 
                                                                     styleClass="form-control disabled" 
                                                                     html-readonly="true"
@@ -957,9 +980,13 @@
                                                                      rendered="{!AND(camposHabilitados, !registroSalvo)}">
                                                         <apex:selectOptions value="{!operadorOptions}"/>
                                                     </apex:selectList>
-                                                    <apex:outputText value="{!IF(controleHoras.Operador__r.Name != null, controleHoras.Operador__r.Name, '-- Não informado --')}" 
-                                                                     styleClass="form-control readonly-field readonly-display"
-                                                                     rendered="{!AND(camposHabilitados, registroSalvo)}"/>
+                                                    <apex:outputPanel styleClass="form-control readonly-field readonly-display"
+                                                                      rendered="{!AND(camposHabilitados, registroSalvo)}">
+                                                                        <apex:outputText value="{!IF(controleHoras.Operador__r.Name != null, controleHoras.Operador__r.Name, IF(ISBLANK(controleHoras.Operador_Externo__c), '-- Não informado --', controleHoras.Operador_Externo__c))}"/>
+                                                                        <apex:outputPanel rendered="{!AND(ISBLANK(controleHoras.Operador__r.Name), NOT(ISBLANK(controleHoras.Operador_Externo__c)))}">
+                                                                            <span class="badge-externo">externo</span>
+                                                                        </apex:outputPanel>
+                                                                    </apex:outputPanel>
                                                     <apex:inputText value="{!mensagemCampoDesabilitado}" 
                                                                     styleClass="form-control disabled" 
                                                                     html-readonly="true"

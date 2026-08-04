@@ -1491,6 +1491,20 @@
     .controle-horas-container .tipo-voo.tipo-TT { background-color: #dc3545; }
     .controle-horas-container .tipo-voo.tipo-AB { background-color: #ff9800; }
 
+    /* Marcação discreta para piloto/operador sem correspondência em Empregado__c.
+       Escala junto com o contexto (card do calendário, modal, formulário) e usa a
+       própria cor do texto em baixa opacidade para não competir com o nome. */
+    .controle-horas-container .badge-externo {
+    font-size: 0.65em;
+    font-style: italic;
+    font-weight: 400;
+    color: currentColor;
+    opacity: 0.45;
+    letter-spacing: 0.2px;
+    margin-left: 3px;
+    white-space: nowrap;
+    }
+
     .controle-horas-container .combustivel-info {
     color: var(--cor-texto-secundario);
     font-size: 9px;

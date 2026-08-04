@@ -42,8 +42,8 @@ public without sharing class ControleHorasVooSelector {
     public static Controle_Horas_Voo__c selectById(Id controleId) {
         return [
             SELECT Id, Name, Data_do_Voo__c,
-                   Piloto__c, Piloto__r.Name,
-                   Operador__c, Operador__r.Name,
+                   Piloto__c, Piloto__r.Name, Piloto_Externo__c,
+                   Operador__c, Operador__r.Name, Operador_Externo__c,
                    Aeronave__c, Aeronave__r.Name,
                    Horas_Voo__c, Descricao__c, Tipo__c,
                    ARR__c, DEP__c, Acionamento__c, Corte__c, TOT__c,
@@ -64,7 +64,8 @@ public without sharing class ControleHorasVooSelector {
     ) {
         return [
             SELECT Id, Aeronave__c, Aeronave__r.Name, Data_do_Voo__c,
-                   Piloto__c, Piloto__r.Name, Operador__c, Operador__r.Name,
+                   Piloto__c, Piloto__r.Name, Piloto_Externo__c,
+                   Operador__c, Operador__r.Name, Operador_Externo__c,
                    Tipo__c, Descricao__c, DEP__c, ARR__c,
                    Acionamento__c, Corte__c, TOT__c, Horas_Voo__c,
                    Notas__c, Obs__c, Faturado__c,

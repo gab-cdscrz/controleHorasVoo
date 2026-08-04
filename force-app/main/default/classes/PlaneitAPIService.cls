@@ -33,6 +33,12 @@ public without sharing class PlaneitAPIService {
     private static final String TOTAIS_ENDPOINT = '/aeronave/totais';
     private static final Integer TIMEOUT_SEGUNDOS = 120;
     private static final Integer MAX_CALLOUTS = 90; // Margem de segurança (limite: 100)
+
+    // Valores da lista "Operador:" (campoCustomizado1) que indicam ausência de operador
+    // (usados em translados e voos sem operador a bordo), e não nomes de pessoas.
+    private static final Set<String> OPERADOR_SEM_VALOR = new Set<String>{
+        'N/A', 'NA', 'N.A.', '-', '--'
+    };
     
     // Cache do token em memória (válido apenas durante a transação)
     private static String cachedToken = null;
@@ -81,9 +87,10 @@ public without sharing class PlaneitAPIService {
         public String horarioCorteMotores;
         public Decimal totalCombustivelPartida;
         public String naturezaVoo;
-        public String campoCustomizado1; // Operador
-        public String campoCustomizado2; // Coleta de Dados (Sim/Não)
-        public String campoCustomizado3; // Descrição
+        public String campoCustomizado1; // "Operador:" (lista de seleção)
+        public String campoCustomizado2; // "Coleta de Dados?" (Sim/Não)
+        public String campoCustomizado3; // "Projeto" (vai para Descrição)
+        public String campoCustomizado4; // "Extras" (nome do operador quando fora da lista)
         public String horasVooEtapa; // TOT no formato HH:MM:SS
         public Decimal horasVooEtapaDecimal; // Horas de voo em decimal
         public List<AssinaturaData> assinaturas; // Piloto e operador
@@ -441,9 +448,10 @@ public without sharing class PlaneitAPIService {
                 if (String.isNotBlank(piloto)) {
                     todosNomesPilotos.add(piloto.trim());
                 }
-                // Extrair operador (campoCustomizado1)
-                if (String.isNotBlank(vooData.campoCustomizado1)) {
-                    todosNomesOperadores.add(vooData.campoCustomizado1.trim());
+                // Extrair operador (lista "Operador:" ou campo livre "Extras")
+                String nomeOperador = resolverNomeOperador(vooData);
+                if (String.isNotBlank(nomeOperador)) {
+                    todosNomesOperadores.add(nomeOperador);
                 }
                 // Coletar IDs de todos os abastecimentos
                 if (vooData.abastecimentos != null) {
@@ -666,12 +674,27 @@ public without sharing class PlaneitAPIService {
                 vooRecord.TOT__c = converterTempoParaDecimalHHMM(vooData.horasVooEtapa); //mudar para horasVooEtapa
                 
                 // Lookup de Piloto e Operador (usa Map - ZERO queries!)
+                // Quando não há Empregado__c correspondente, guarda o nome cru em
+                // Piloto_Externo__c/Operador_Externo__c (pessoa externa/terceirizada) para
+                // exibição na UI. Limpa o campo externo quando um match é encontrado, para
+                // autocorrigir caso a pessoa seja cadastrada como empregado depois.
                 if (String.isNotBlank(nomePiloto)) {
-                    vooRecord.Piloto__c = empregadosPorNome.get(nomePiloto.trim());
+                    Id pilotoId = empregadosPorNome.get(nomePiloto.trim());
+                    vooRecord.Piloto__c = pilotoId;
+                    vooRecord.Piloto_Externo__c = pilotoId == null ? nomePiloto.trim() : null;
+                } else {
+                    vooRecord.Piloto__c = null;
+                    vooRecord.Piloto_Externo__c = null;
                 }
-                
-                if (String.isNotBlank(vooData.campoCustomizado1)) {
-                    vooRecord.Operador__c = empregadosPorNome.get(vooData.campoCustomizado1.trim());
+
+                String nomeOperadorVoo = resolverNomeOperador(vooData);
+                if (String.isNotBlank(nomeOperadorVoo)) {
+                    Id operadorId = empregadosPorNome.get(nomeOperadorVoo);
+                    vooRecord.Operador__c = operadorId;
+                    vooRecord.Operador_Externo__c = operadorId == null ? nomeOperadorVoo : null;
+                } else {
+                    vooRecord.Operador__c = null;
+                    vooRecord.Operador_Externo__c = null;
                 }
                 
                 // Adicionar na lista correta
@@ -1113,8 +1136,43 @@ public without sharing class PlaneitAPIService {
                 }
             }
         }
-        
+
         return null;
+    }
+
+    /**
+     * @description Resolve o nome do operador a partir dos campos customizados do PlaneIT.
+     *
+     * No PlaneIT, "Operador:" (campoCustomizado1) é uma lista de seleção cujo valor pode ser:
+     * - o nome de um operador da lista (ex.: "Lucas Rolim");
+     * - "N/A", quando o voo não tem operador a bordo (translados, por exemplo);
+     * - "Outro - Especificar em Extras", quando o operador não está na lista - nesse caso o
+     *   nome real é digitado no campo livre "Extras" (campoCustomizado4).
+     *
+     * Sem esse tratamento, os valores sentinela seriam gravados como se fossem nomes de
+     * pessoas (ex.: um operador chamado "N/A").
+     *
+     * @param vooData Dados do voo vindos da API
+     * @return Nome do operador, ou null quando o voo não tem operador identificado
+     */
+    private static String resolverNomeOperador(VooData vooData) {
+        String operadorSelecionado = String.isBlank(vooData.campoCustomizado1)
+            ? null
+            : vooData.campoCustomizado1.trim();
+
+        if (String.isBlank(operadorSelecionado) ||
+            OPERADOR_SEM_VALOR.contains(operadorSelecionado.toUpperCase())) {
+            return null;
+        }
+
+        // "Outro - Especificar em Extras": o nome real está no campo livre "Extras"
+        if (operadorSelecionado.startsWithIgnoreCase('OUTRO')) {
+            return String.isBlank(vooData.campoCustomizado4)
+                ? null
+                : vooData.campoCustomizado4.trim();
+        }
+
+        return operadorSelecionado;
     }
 
     /**

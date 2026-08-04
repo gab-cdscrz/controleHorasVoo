@@ -224,6 +224,84 @@ private class ControleHorasVooReportServiceTest {
         Assert.isNotNull(invalidRequestResponse.message);
     }
 
+    /**
+     * Voos com piloto externo (sem Empregado__c correspondente) devem aparecer no
+     * relatório com o nome cru + "(Externo)", e como um grupo de resumo próprio -
+     * não misturado com voos realmente sem piloto informado.
+     */
+    @IsTest
+    static void shouldShowExternalPilotNameAndSeparateSummaryGroup() {
+        Empregado__c operatorValue = TestDataStatic.empregadoOpEquipEsp;
+        Aeronave__c aircraft = TestDataStatic.aeronaveTeste;
+        Date reportDate = Date.today();
+
+        insert new List<Controle_Horas_Voo__c>{
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aircraft.Id,
+                Piloto_Externo__c = 'Carlos Andrade Voador',
+                Operador__c = operatorValue.Id,
+                Data_do_Voo__c = reportDate,
+                Tipo__c = 'SA',
+                Horas_Voo__c = 1,
+                TOT__c = 1
+            ),
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aircraft.Id,
+                Piloto_Externo__c = 'Maria Souza Convidada',
+                Operador__c = operatorValue.Id,
+                Data_do_Voo__c = reportDate,
+                Tipo__c = 'SA',
+                Horas_Voo__c = 2,
+                TOT__c = 2
+            ),
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aircraft.Id,
+                Operador__c = operatorValue.Id,
+                Data_do_Voo__c = reportDate,
+                Tipo__c = 'SA',
+                Horas_Voo__c = 3,
+                TOT__c = 3
+            )
+        };
+
+        Test.startTest();
+        ControleHorasVooReportService.ReportResult result =
+            ControleHorasVooReportService.generate(
+                requestJson(
+                    'PILOTO',
+                    null,
+                    null,
+                    reportDate,
+                    reportDate,
+                    new List<String>{ 'SA' }
+                )
+            );
+        Test.stopTest();
+
+        Assert.areEqual(3, result.totalFlights);
+        Assert.areEqual(3, result.summaries.size(),
+            'Cada piloto externo deve formar seu próprio grupo, separado do "sem responsável".');
+
+        Set<String> summaryNames = new Set<String>();
+        for (ControleHorasVooReportService.SummaryRow summary : result.summaries) {
+            summaryNames.add(summary.responsibleName);
+        }
+        Assert.isTrue(summaryNames.contains('Carlos Andrade Voador (Externo)'));
+        Assert.isTrue(summaryNames.contains('Maria Souza Convidada (Externo)'));
+        Assert.isTrue(summaryNames.contains('Não informado'));
+
+        for (ControleHorasVooReportService.DetailRow detail : result.details) {
+            if (detail.pilotName == 'Carlos Andrade Voador (Externo)') {
+                Assert.areEqual(1, detail.flightHours);
+            } else if (detail.pilotName == 'Maria Souza Convidada (Externo)') {
+                Assert.areEqual(2, detail.flightHours);
+            } else {
+                Assert.areEqual('Não informado', detail.pilotName);
+                Assert.areEqual(3, detail.flightHours);
+            }
+        }
+    }
+
     private static Controle_Horas_Voo__c createFlight(
         Id aircraftId,
         Id pilotId,

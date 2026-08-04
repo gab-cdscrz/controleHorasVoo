@@ -116,9 +116,13 @@ public with sharing class ControleHorasVooReportService {
             result.totalFlightHours += detail.flightHours;
             result.totalTotMinutes += detail.totMinutes;
 
-            String summaryKey = detail.responsibleId == null
-                ? 'SEM_RESPONSAVEL'
-                : detail.responsibleId;
+            // Sem responsibleId, o voo pode ser de um piloto/operador externo (nome cru
+            // preservado em responsibleName com o sufixo "(Externo)") ou realmente sem
+            // ninguém informado - agrupar por nome evita misturar externos diferentes
+            // numa única linha "Sem responsável".
+            String summaryKey = detail.responsibleId != null
+                ? detail.responsibleId
+                : (detail.responsibleName == 'Não informado' ? 'SEM_RESPONSAVEL' : 'EXTERNO:' + detail.responsibleName);
             SummaryRow summary = summaryByKey.get(summaryKey);
             if (summary == null) {
                 summary = new SummaryRow(
@@ -216,6 +220,21 @@ public with sharing class ControleHorasVooReportService {
         }
         String nameValue = (String) relationshipValue.get('Name');
         return String.isBlank(nameValue) ? 'Não informado' : nameValue;
+    }
+
+    /**
+     * @description Resolve o nome de um piloto/operador, caindo para o nome externo
+     * (pessoa sem Empregado__c correspondente, ex.: piloto terceirizado) quando o
+     * lookup estiver vazio.
+     */
+    private static String safeName(SObject relationshipValue, String externalNameValue) {
+        String nameValue = relationshipValue == null ? null : (String) relationshipValue.get('Name');
+        if (String.isNotBlank(nameValue)) {
+            return nameValue;
+        }
+        return String.isNotBlank(externalNameValue)
+            ? externalNameValue.trim() + ' (Externo)'
+            : 'Não informado';
     }
 
     public class ReportRequest {
@@ -360,8 +379,8 @@ public with sharing class ControleHorasVooReportService {
             id = flight.Id;
             aircraftName = safeName(flight.Aeronave__r);
             flightDate = String.valueOf(flight.Data_do_Voo__c);
-            pilotName = safeName(flight.Piloto__r);
-            operatorName = safeName(flight.Operador__r);
+            pilotName = safeName(flight.Piloto__r, flight.Piloto_Externo__c);
+            operatorName = safeName(flight.Operador__r, flight.Operador_Externo__c);
             responsibleId = String.valueOf(
                 requestValue.isPilotReport
                     ? flight.Piloto__c

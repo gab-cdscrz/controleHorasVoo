@@ -249,4 +249,81 @@ private class ControleHorasVooServiceTest {
             );
         }
     }
+
+    /**
+     * Um voo com piloto externo (Piloto__c nulo, mas Piloto_Externo__c preenchido) deve
+     * ser salvo normalmente - a validação de "piloto obrigatório" não deve bloquear esse
+     * caso, já que o dropdown de piloto só lista Empregado__c e pilotos externos não
+     * aparecem lá.
+     */
+    @IsTest
+    static void savesFlightWithExternalPilotWithoutValidationError() {
+        Aeronave__c aircraft = TestDataStatic.aeronaveteste;
+
+        ControleHorasVooService.SaveRequest request =
+            new ControleHorasVooService.SaveRequest();
+        request.controle = new Controle_Horas_Voo__c(
+            Aeronave__c = aircraft.Id,
+            Piloto_Externo__c = 'Carlos Andrade Voador',
+            Data_do_Voo__c = Date.today(),
+            Tipo__c = 'SA'
+        );
+
+        Test.startTest();
+        ControleHorasVooService.SaveResult result =
+            ControleHorasVooService.save(request);
+        Test.stopTest();
+
+        Controle_Horas_Voo__c saved = [
+            SELECT Piloto__c, Piloto_Externo__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id = :result.controleId
+        ];
+        System.assertEquals(null, saved.Piloto__c);
+        System.assertEquals('Carlos Andrade Voador', saved.Piloto_Externo__c);
+    }
+
+    /**
+     * Editar outro campo de um voo com piloto externo (ex.: corrigir a rota) não deve
+     * apagar a tag de piloto externo já preenchida pela sincronização.
+     */
+    @IsTest
+    static void editingFlightPreservesExternalPilotName() {
+        Aeronave__c aircraft = TestDataStatic.aeronaveteste;
+
+        Controle_Horas_Voo__c existingFlight = new Controle_Horas_Voo__c(
+            Aeronave__c = aircraft.Id,
+            Piloto_Externo__c = 'Carlos Andrade Voador',
+            Data_do_Voo__c = Date.today(),
+            Tipo__c = 'SA',
+            DEP__c = 'OLD',
+            ARR__c = 'OLD'
+        );
+        insert existingFlight;
+
+        ControleHorasVooService.SaveRequest request =
+            new ControleHorasVooService.SaveRequest();
+        request.controleOriginalId = existingFlight.Id;
+        request.controle = new Controle_Horas_Voo__c(
+            Aeronave__c = aircraft.Id,
+            Piloto_Externo__c = 'Carlos Andrade Voador',
+            Data_do_Voo__c = Date.today(),
+            Tipo__c = 'SA',
+            DEP__c = 'SBRP',
+            ARR__c = 'SBPA'
+        );
+
+        Test.startTest();
+        ControleHorasVooService.save(request);
+        Test.stopTest();
+
+        Controle_Horas_Voo__c updated = [
+            SELECT DEP__c, ARR__c, Piloto_Externo__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id = :existingFlight.Id
+        ];
+        System.assertEquals('SBRP', updated.DEP__c, 'DEP deve ser atualizado normalmente');
+        System.assertEquals('SBPA', updated.ARR__c, 'ARR deve ser atualizado normalmente');
+        System.assertEquals('Carlos Andrade Voador', updated.Piloto_Externo__c, 'Tag de piloto externo não deve ser apagada ao editar outros campos');
+    }
 }

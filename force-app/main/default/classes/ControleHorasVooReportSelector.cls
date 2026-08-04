@@ -39,7 +39,8 @@ public without sharing class ControleHorasVooReportSelector {
             : 'Operador__r.Name';
         String queryValue =
             'SELECT Id, Aeronave__c, Aeronave__r.Name, Data_do_Voo__c, ' +
-            'Piloto__c, Piloto__r.Name, Operador__c, Operador__r.Name, ' +
+            'Piloto__c, Piloto__r.Name, Piloto_Externo__c, ' +
+            'Operador__c, Operador__r.Name, Operador_Externo__c, ' +
             'Tipo__c, Acionamento__c, Corte__c, Horas_Voo__c, TOT__c, ' +
             'DEP__c, ARR__c, Descricao__c ' +
             'FROM Controle_Horas_Voo__c ' +
