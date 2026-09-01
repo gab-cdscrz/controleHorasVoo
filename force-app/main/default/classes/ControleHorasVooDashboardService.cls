@@ -3,13 +3,14 @@
  */
 public with sharing class ControleHorasVooDashboardService {
     private static final List<String> FLIGHT_TYPE_ORDER =
-        new List<String>{ 'TR', 'SA', 'EX', 'TT' };
+        new List<String>{ 'TR', 'SA', 'PV', 'EX', 'TT' };
     private static final Set<String> FLIGHT_TYPES =
         new Set<String>(FLIGHT_TYPE_ORDER);
     private static final Map<String, String> FLIGHT_TYPE_LABELS =
         new Map<String, String>{
             'TR' => 'Translado',
             'SA' => 'Serviço Aéreo',
+            'PV' => 'Privado',
             'EX' => 'Experimental',
             'TT' => 'Tentativa',
             'AB' => 'Abastecimento'
@@ -18,6 +19,7 @@ public with sharing class ControleHorasVooDashboardService {
         new Map<String, String>{
             'TR' => '#007bff',
             'SA' => '#28a745',
+            'PV' => '#6f42c1',
             'EX' => '#ffc107',
             'TT' => '#dc3545',
             'AB' => '#ff9800'

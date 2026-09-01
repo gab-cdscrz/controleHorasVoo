@@ -487,7 +487,7 @@ public without sharing class PlaneitAPIService {
         Map<Integer, Controle_Horas_Voo__c> todosVoosExistentes = new Map<Integer, Controle_Horas_Voo__c>();
         if (!todosIdsVoosAPI.isEmpty()) {
             for (Controle_Horas_Voo__c vooExist : [
-                SELECT Id, Id_Voo_Planeit__c, Editado_Manualmente__c
+                SELECT Id, Id_Voo_Planeit__c, Editado_Manualmente__c, Faturado__c
                 FROM Controle_Horas_Voo__c 
                 WHERE Id_Voo_Planeit__c IN :todosIdsVoosAPI
             ]) {
@@ -496,12 +496,13 @@ public without sharing class PlaneitAPIService {
         }
         
         // FASE 4.0: BUSCAR TODOS OS ABASTECIMENTOS EXISTENTES
-        // Voo__c e Voo__r.Editado_Manualmente__c são necessários para avulsos: permitem
+        // Os campos do voo pai são necessários para avulsos: permitem
         // localizar o placeholder AB já criado e verificar se ele está protegido.
         Map<Integer, Abastecimento__c> todosAbastecimentosExistentes = new Map<Integer, Abastecimento__c>();
         if (!todosIdsAbastecimentosAPI.isEmpty()) {
             for (Abastecimento__c abExist : [
-                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Voo__c, Voo__r.Editado_Manualmente__c
+                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Faturado__c,
+                    Voo__c, Voo__r.Editado_Manualmente__c, Voo__r.Faturado__c
                 FROM Abastecimento__c
                 WHERE Id_Abastecimento_Planeit__c IN :todosIdsAbastecimentosAPI
             ]) {
@@ -517,7 +518,11 @@ public without sharing class PlaneitAPIService {
         // Buscar voos do SF que têm Id_Voo_Planeit__c preenchido, no período e aeronaves sincronizadas
         Set<String> idsAeronavesSet = new Set<String>(idsAeronavesRecords);
         List<Controle_Horas_Voo__c> voosSFComIdPlaneit = [
-            SELECT Id, Id_Voo_Planeit__c, Aeronave__c, Data_do_Voo__c, Editado_Manualmente__c
+            SELECT Id, Id_Voo_Planeit__c, Aeronave__c, Data_do_Voo__c,
+                Editado_Manualmente__c, Faturado__c,
+                (SELECT Id FROM Abastecimentos__r
+                    WHERE Editado_Manualmente__c = true OR Faturado__c = true
+                    LIMIT 1)
             FROM Controle_Horas_Voo__c
             WHERE Aeronave__c IN :idsAeronavesSet
             AND Data_do_Voo__c >= :dataInicio
@@ -530,9 +535,10 @@ public without sharing class PlaneitAPIService {
             Integer idVooPlaneit = Integer.valueOf(vooSF.Id_Voo_Planeit__c);
             if (!todosIdsVoosAPI.contains(idVooPlaneit)) {
                 // Este voo foi deletado no Planeit
-                if (vooSF.Editado_Manualmente__c) {
-                    // Protegido: usuário editou manualmente, preservar no Salesforce
-                    System.debug('🔒 Voo preservado (editado manualmente): Id_Voo_Planeit__c=' + idVooPlaneit);
+                if (vooSF.Editado_Manualmente__c || vooSF.Faturado__c ||
+                    !vooSF.Abastecimentos__r.isEmpty()) {
+                    // Preserva também o pai para impedir exclusão em cascata de abastecimento protegido.
+                    System.debug('🔒 Voo preservado (edição manual ou faturamento): Id_Voo_Planeit__c=' + idVooPlaneit);
                 } else {
                     voosParaDeletar.add(vooSF);
                     System.debug('🗑️ Voo para deletar: Id_Voo_Planeit__c=' + idVooPlaneit + 
@@ -550,16 +556,17 @@ public without sharing class PlaneitAPIService {
         List<Abastecimento__c> abastecimentosParaDeletar = new List<Abastecimento__c>();
         if (!idsVoosExistentes.isEmpty()) {
             for (Abastecimento__c abSF : [
-                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c
+                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Faturado__c,
+                    Voo__r.Editado_Manualmente__c, Voo__r.Faturado__c
                 FROM Abastecimento__c 
                 WHERE Voo__c IN :idsVoosExistentes 
                 AND Id_Abastecimento_Planeit__c != null
             ]) {
                 Integer idAbPlaneit = Integer.valueOf(abSF.Id_Abastecimento_Planeit__c);
                 if (!todosIdsAbastecimentosAPI.contains(idAbPlaneit)) {
-                    if (abSF.Editado_Manualmente__c) {
-                        // Protegido: usuário editou manualmente, preservar no Salesforce
-                        System.debug('🔒 Abastecimento preservado (editado manualmente): Id=' + abSF.Id);
+                    if (abSF.Editado_Manualmente__c || abSF.Faturado__c ||
+                        abSF.Voo__r.Editado_Manualmente__c || abSF.Voo__r.Faturado__c) {
+                        System.debug('🔒 Abastecimento preservado (edição manual ou faturamento): Id=' + abSF.Id);
                     } else {
                         abastecimentosParaDeletar.add(abSF);
                     }
@@ -579,7 +586,8 @@ public without sharing class PlaneitAPIService {
         Set<Id> idsPlaceholdersParaDeletar = new Set<Id>();
         if (!idsAeronavesParaExclusaoAvulsos.isEmpty()) {
             for (Abastecimento__c abAvulsoSF : [
-                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Voo__c, Voo__r.Editado_Manualmente__c
+                SELECT Id, Id_Abastecimento_Planeit__c, Editado_Manualmente__c, Faturado__c,
+                    Voo__c, Voo__r.Editado_Manualmente__c, Voo__r.Faturado__c
                 FROM Abastecimento__c
                 WHERE Voo__r.Aeronave__c IN :idsAeronavesParaExclusaoAvulsos
                 AND Voo__r.Tipo__c = 'AB'
@@ -592,9 +600,9 @@ public without sharing class PlaneitAPIService {
                 if (todosIdsAbastecimentosAvulsosAPI.contains(idAvulsoPlaneit)) {
                     continue; // ainda existe no Planeit (mesmo que fora da janela por data)
                 }
-                if (abAvulsoSF.Editado_Manualmente__c || abAvulsoSF.Voo__r.Editado_Manualmente__c) {
-                    // Protegido: usuário editou manualmente o abastecimento ou o placeholder
-                    System.debug('🔒 Abastecimento avulso preservado (editado manualmente): Id=' + abAvulsoSF.Id);
+                if (abAvulsoSF.Editado_Manualmente__c || abAvulsoSF.Faturado__c ||
+                    abAvulsoSF.Voo__r.Editado_Manualmente__c || abAvulsoSF.Voo__r.Faturado__c) {
+                    System.debug('🔒 Abastecimento avulso preservado (edição manual ou faturamento): Id=' + abAvulsoSF.Id);
                     continue;
                 }
                 abastecimentosParaDeletar.add(abAvulsoSF);
@@ -699,9 +707,9 @@ public without sharing class PlaneitAPIService {
                 
                 // Adicionar na lista correta
                 if (isUpdate) {
-                    // Se o voo foi editado manualmente, ignorar atualização completa (voo + abastecimentos)
-                    if (vooRecord.Editado_Manualmente__c) {
-                        System.debug('🔒 Voo ignorado (editado manualmente): Id_Voo_Planeit__c=' + vooData.idVoo);
+                    // Dados confirmados pelo usuário ou já faturados não podem ser sobrescritos.
+                    if (vooRecord.Editado_Manualmente__c || vooRecord.Faturado__c) {
+                        System.debug('🔒 Voo ignorado (edição manual ou faturamento): Id_Voo_Planeit__c=' + vooData.idVoo);
                         continue;
                     }
                     todosVoosParaAtualizar.add(vooRecord);
@@ -710,9 +718,9 @@ public without sharing class PlaneitAPIService {
                         for (AbastecimentoData abData : vooData.abastecimentos) {
                             Abastecimento__c abRecord = construirAbastecimento(abData, vooRecord.Id, todosAbastecimentosExistentes);
                             if (todosAbastecimentosExistentes.containsKey(abData.id)) {
-                                // Se o abastecimento foi editado manualmente, não sobrescrever
-                                if (todosAbastecimentosExistentes.get(abData.id).Editado_Manualmente__c) {
-                                    System.debug('🔒 Abastecimento ignorado (editado manualmente): Id_Abastecimento_Planeit__c=' + abData.id);
+                                Abastecimento__c abastecimentoExistente = todosAbastecimentosExistentes.get(abData.id);
+                                if (abastecimentoExistente.Editado_Manualmente__c || abastecimentoExistente.Faturado__c) {
+                                    System.debug('🔒 Abastecimento ignorado (edição manual ou faturamento): Id_Abastecimento_Planeit__c=' + abData.id);
                                 } else {
                                     todosAbastecimentosParaAtualizar.add(abRecord);
                                 }
@@ -739,8 +747,9 @@ public without sharing class PlaneitAPIService {
                 for (AbastecimentoAvulsoData avData : avulsosAeronave) {
                     if (todosAbastecimentosExistentes.containsKey(avData.id)) {
                         Abastecimento__c existente = todosAbastecimentosExistentes.get(avData.id);
-                        if (existente.Editado_Manualmente__c || existente.Voo__r.Editado_Manualmente__c) {
-                            System.debug('🔒 Abastecimento avulso ignorado (editado manualmente): Id_Abastecimento_Planeit__c=' + avData.id);
+                        if (existente.Editado_Manualmente__c || existente.Faturado__c ||
+                            existente.Voo__r.Editado_Manualmente__c || existente.Voo__r.Faturado__c) {
+                            System.debug('🔒 Abastecimento avulso ignorado (edição manual ou faturamento): Id_Abastecimento_Planeit__c=' + avData.id);
                             continue;
                         }
                         Abastecimento__c abAtualizado = construirAbastecimentoAvulso(avData, existente.Voo__c, todosAbastecimentosExistentes);

@@ -5,13 +5,14 @@ public with sharing class ControleHorasVooReportService {
     private static final Integer MAX_RANGE_DAYS = 366;
     private static final Integer MAX_ROWS = 2000;
     private static final List<String> TYPE_ORDER =
-        new List<String>{ 'TR', 'SA', 'EX', 'TT' };
+        new List<String>{ 'TR', 'SA', 'PV', 'EX', 'TT' };
     private static final Set<String> ALLOWED_TYPES =
         new Set<String>(TYPE_ORDER);
     private static final Map<String, String> TYPE_LABELS =
         new Map<String, String>{
             'TR' => 'Translado',
             'SA' => 'Serviço Aéreo',
+            'PV' => 'Privado',
             'EX' => 'Experimental',
             'TT' => 'Tentativa'
         };

@@ -134,6 +134,43 @@ private class ControleHorasVooReportServiceTest {
     }
 
     @IsTest
+    static void shouldGeneratePrivateFlightReport() {
+        Empregado__c pilot = TestDataStatic.empregadoPiloto;
+        Empregado__c operatorValue = TestDataStatic.empregadoOpEquipEsp;
+        Aeronave__c aircraft = TestDataStatic.aeronaveTeste;
+        Date reportDate = Date.today();
+        insert createFlight(
+            aircraft.Id,
+            pilot.Id,
+            operatorValue.Id,
+            reportDate,
+            'PV',
+            Time.newInstance(14, 0, 0, 0),
+            Time.newInstance(15, 0, 0, 0),
+            1,
+            1
+        );
+
+        Test.startTest();
+        ControleHorasVooReportService.ReportResult result =
+            ControleHorasVooReportService.generate(
+                requestJson(
+                    'PILOTO',
+                    pilot.Id,
+                    aircraft.Id,
+                    reportDate,
+                    reportDate,
+                    new List<String>{ 'PV' }
+                )
+            );
+        Test.stopTest();
+
+        Assert.areEqual(1, result.totalFlights);
+        Assert.areEqual('PV', result.details[0].flightType);
+        Assert.areEqual('Privado', result.details[0].flightTypeLabel);
+    }
+
+    @IsTest
     static void shouldRejectInvalidFilters() {
         Date reportDate = Date.today();
 

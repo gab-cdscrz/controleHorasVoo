@@ -1081,6 +1081,7 @@
                                                         <apex:selectOption itemValue="" itemLabel="-- Selecione --"/>
                                                         <apex:selectOption itemValue="TR" itemLabel="TR - Translado"/>
                                                         <apex:selectOption itemValue="SA" itemLabel="SA - Serviço Aéreo"/>
+                                                        <apex:selectOption itemValue="PV" itemLabel="PV - Privado"/>
                                                         <apex:selectOption itemValue="EX" itemLabel="EX - Experimental"/>
                                                         <apex:selectOption itemValue="TT" itemLabel="TT - Tentativa"/>
                                                         <apex:selectOption itemValue="AB" itemLabel="AB - Abastecimento"/>
@@ -2065,6 +2066,13 @@
                                                     <span class="aircraft-toggle-slider"></span>
                                                 </span>
                                                 <span><strong>SA</strong> Serviço Aéreo</span>
+                                            </label>
+                                            <label class="report-type-control">
+                                                <span class="aircraft-toggle">
+                                                    <input type="checkbox" value="PV" checked="checked"/>
+                                                    <span class="aircraft-toggle-slider"></span>
+                                                </span>
+                                                <span><strong>PV</strong> Privado</span>
                                             </label>
                                             <label class="report-type-control">
                                                 <span class="aircraft-toggle">

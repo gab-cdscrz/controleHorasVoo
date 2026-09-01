@@ -9,6 +9,7 @@ private class ControleHorasVooDashboardServiceTest {
         insert new List<Controle_Horas_Voo__c>{
             createFlight(aircraft.Id, pilot.Id, referenceDate, 'TR', 1.5),
             createFlight(aircraft.Id, pilot.Id, referenceDate, 'TT', 0.5),
+            createFlight(aircraft.Id, pilot.Id, referenceDate, 'PV', 1),
             createFlight(aircraft.Id, pilot.Id, referenceDate, 'AB', 0),
             createFlight(
                 aircraft.Id,
@@ -42,9 +43,9 @@ private class ControleHorasVooDashboardServiceTest {
         Test.stopTest();
 
         Assert.areEqual(1, result.aircraft.size(), 'One aircraft is expected.');
-        Assert.areEqual(2, result.totalFlights, 'AB must not count as a flight.');
+        Assert.areEqual(3, result.totalFlights, 'AB must not count as a flight.');
         Assert.areEqual(
-            Decimal.valueOf('2.0'),
+            Decimal.valueOf('3.0'),
             result.totalHours,
             'Only hours from the requested month should be aggregated.'
         );
@@ -52,6 +53,16 @@ private class ControleHorasVooDashboardServiceTest {
             'Translado',
             ControleHorasVooDashboardService.getFlightTypeLabel('TR'),
             'TR must always be displayed as Translado.'
+        );
+        Assert.areEqual(
+            'Privado',
+            ControleHorasVooDashboardService.getFlightTypeLabel('PV'),
+            'PV must always be displayed as Privado.'
+        );
+        Assert.areEqual(
+            '#6f42c1',
+            ControleHorasVooDashboardService.getFlightTypeColor('PV'),
+            'PV must use its canonical dashboard color.'
         );
         Assert.areEqual(
             'Tentativa',

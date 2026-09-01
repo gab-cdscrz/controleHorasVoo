@@ -1487,6 +1487,7 @@
     /* Cores específicas por tipo de voo */
     .controle-horas-container .tipo-voo.tipo-TR { background-color: #007bff; }
     .controle-horas-container .tipo-voo.tipo-SA { background-color: #28a745; }
+    .controle-horas-container .tipo-voo.tipo-PV { background-color: #6f42c1; }
     .controle-horas-container .tipo-voo.tipo-EX { background-color: #ffc107; }
     .controle-horas-container .tipo-voo.tipo-TT { background-color: #dc3545; }
     .controle-horas-container .tipo-voo.tipo-AB { background-color: #ff9800; }

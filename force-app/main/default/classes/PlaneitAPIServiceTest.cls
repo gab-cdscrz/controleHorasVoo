@@ -105,6 +105,44 @@ private class PlaneitAPIServiceTest {
             return res;
         }
     }
+
+    /** Retorna um voo privado e respostas vazias válidas para os demais endpoints. */
+    private class VooPrivadoMock implements HttpCalloutMock {
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            res.setStatusCode(200);
+
+            if (req.getEndpoint().contains('/login')) {
+                res.setBody('{"codigo":200,"data":{"access_token":"TEST","token_type":"Bearer"}}');
+            } else if (req.getEndpoint().contains('/totais')) {
+                res.setBody('{"codigo":200,"data":{"horasVooEtapaDecimalTotal":100}}');
+            } else if (req.getEndpoint().contains('/voos')) {
+                res.setBody('{' +
+                    '"codigo":200,' +
+                    '"data":[{' +
+                        '"idVoo":197049,' +
+                        '"idAeronave":1602,' +
+                        '"matricula":"PTVGD",' +
+                        '"dataVoo":"2025-10-22",' +
+                        '"localDecolagem":"SNAX",' +
+                        '"localPouso":"SSCP",' +
+                        '"horarioPartida":"09:00:00",' +
+                        '"horarioCorteMotores":"10:00:00",' +
+                        '"naturezaVoo":"PV",' +
+                        '"horasVooEtapa":"01:00:00",' +
+                        '"horasVooEtapaDecimal":1,' +
+                        '"assinaturas":[],' +
+                        '"tripulacao":[],' +
+                        '"abastecimentos":[]' +
+                    '}]' +
+                '}');
+            } else if (req.getEndpoint().contains('/abastecimentos')) {
+                res.setBody('{"codigo":200,"data":[]}');
+            }
+            return res;
+        }
+    }
     
     /**
      * Mock para simular erro na API
@@ -1168,8 +1206,37 @@ private class PlaneitAPIServiceTest {
         System.assertEquals(true, respostas[0].sucesso, 'Deve sincronizar com sucesso');
     }
 
+    @IsTest
+    static void testSincronizarVooPrivado() {
+        Test.setMock(HttpCalloutMock.class, new VooPrivadoMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1602 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        Test.startTest();
+        List<SincronizarVoosResponse> resultados = PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        Assert.isTrue(resultados[0].sucesso, 'A categoria PV deve ser aceita pela sincronização.');
+        Controle_Horas_Voo__c vooPrivado = [
+            SELECT Tipo__c, Data_do_Voo__c, DEP__c, ARR__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id_Voo_Planeit__c = 197049
+        ];
+        Assert.areEqual('PV', vooPrivado.Tipo__c);
+        Assert.areEqual(Date.newInstance(2025, 10, 22), vooPrivado.Data_do_Voo__c);
+        Assert.areEqual('SNAX', vooPrivado.DEP__c);
+        Assert.areEqual('SSCP', vooPrivado.ARR__c);
+    }
+
     // =========================================================================
-    // TESTES DE PROTEÇÃO CONTRA SOBRESCRITA (Editado_Manualmente__c)
+    // TESTES DE PROTEÇÃO CONTRA SOBRESCRITA (EDIÇÃO MANUAL OU FATURAMENTO)
     // =========================================================================
 
     /**
@@ -1298,6 +1365,182 @@ private class PlaneitAPIServiceTest {
         Abastecimento__c abAposSync = [SELECT Quantidade__c, Editado_Manualmente__c FROM Abastecimento__c WHERE Id = :abProtegido.Id];
         System.assertEquals(999, abAposSync.Quantidade__c, 'Quantidade do abastecimento não deve ser sobrescrita');
         System.assertEquals(true, abAposSync.Editado_Manualmente__c, 'Flag do abastecimento deve permanecer ativo');
+    }
+
+    @IsTest
+    static void testVooFaturadoNaoEAtualizado() {
+        Test.setMock(HttpCalloutMock.class, new MultiEndpointMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+        Controle_Horas_Voo__c vooProtegido = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            DEP__c = 'USER',
+            ARR__c = 'DATA',
+            Faturado__c = true
+        );
+        insert vooProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        Controle_Horas_Voo__c vooAposSync = [
+            SELECT DEP__c, ARR__c, Faturado__c
+            FROM Controle_Horas_Voo__c
+            WHERE Id = :vooProtegido.Id
+        ];
+        Assert.areEqual('USER', vooAposSync.DEP__c);
+        Assert.areEqual('DATA', vooAposSync.ARR__c);
+        Assert.isTrue(vooAposSync.Faturado__c);
+    }
+
+    @IsTest
+    static void testVooFaturadoNaoEDeletado() {
+        Test.setMock(HttpCalloutMock.class, new EmptyVoosMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+        Controle_Horas_Voo__c vooProtegido = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 21),
+            Faturado__c = true
+        );
+        insert vooProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM Controle_Horas_Voo__c WHERE Id = :vooProtegido.Id],
+            'Um voo faturado não pode ser excluído pela sincronização.'
+        );
+    }
+
+    @IsTest
+    static void testAbastecimentoFaturadoNaoEAtualizado() {
+        Test.setMock(HttpCalloutMock.class, new MultiEndpointMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+        Controle_Horas_Voo__c voo = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611
+        );
+        insert voo;
+        Abastecimento__c abastecimentoProtegido = new Abastecimento__c(
+            Voo__c = voo.Id,
+            Id_Abastecimento_Planeit__c = 24747,
+            Quantidade__c = 999,
+            Faturado__c = true
+        );
+        insert abastecimentoProtegido;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        Abastecimento__c abastecimentoAposSync = [
+            SELECT Quantidade__c, Faturado__c
+            FROM Abastecimento__c
+            WHERE Id = :abastecimentoProtegido.Id
+        ];
+        Assert.areEqual(Decimal.valueOf('999'), abastecimentoAposSync.Quantidade__c);
+        Assert.isTrue(abastecimentoAposSync.Faturado__c);
+    }
+
+    @IsTest
+    static void testVooComAbastecimentoFaturadoNaoEDeletado() {
+        Test.setMock(HttpCalloutMock.class, new EmptyVoosMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+        Controle_Horas_Voo__c voo = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 94611,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 21)
+        );
+        insert voo;
+        insert new Abastecimento__c(
+            Voo__c = voo.Id,
+            Id_Abastecimento_Planeit__c = 24747,
+            Faturado__c = true
+        );
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1599 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM Controle_Horas_Voo__c WHERE Id = :voo.Id],
+            'O pai deve ser preservado para impedir exclusão em cascata do abastecimento faturado.'
+        );
+    }
+
+    @IsTest
+    static void testAbastecimentoDeVooFaturadoNaoEDeletado() {
+        Test.setMock(HttpCalloutMock.class, new VooPrivadoMock());
+        Aeronave__c aeronave = TestDataStatic.aeronaveTeste;
+        Controle_Horas_Voo__c vooFaturado = new Controle_Horas_Voo__c(
+            Aeronave__c = aeronave.Id,
+            Id_Voo_Planeit__c = 197049,
+            Data_do_Voo__c = Date.newInstance(2025, 10, 22),
+            Tipo__c = 'PV',
+            Faturado__c = true
+        );
+        insert vooFaturado;
+        Abastecimento__c abastecimento = new Abastecimento__c(
+            Voo__c = vooFaturado.Id,
+            Id_Abastecimento_Planeit__c = 99999
+        );
+        insert abastecimento;
+
+        PlaneitAPIService.SincronizarVoosLoteRequest request = new PlaneitAPIService.SincronizarVoosLoteRequest();
+        request.idsAeronavesPlaneit = new List<Decimal>{ 1602 };
+        request.idsAeronavesRecords = new List<String>{ aeronave.Id };
+        request.dataInicio = Date.newInstance(2025, 10, 1);
+        request.dataFim = Date.newInstance(2025, 10, 31);
+
+        Test.startTest();
+        PlaneitAPIService.sincronizarVoosDoPlaneit(
+            new List<PlaneitAPIService.SincronizarVoosLoteRequest>{ request }
+        );
+        Test.stopTest();
+
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM Abastecimento__c WHERE Id = :abastecimento.Id],
+            'Os abastecimentos de um voo faturado também devem ser preservados.'
+        );
     }
 
     // =========================================================================
