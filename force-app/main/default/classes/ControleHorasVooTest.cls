@@ -849,14 +849,12 @@ public class ControleHorasVooTest {
         ControleHorasVooController controller = new ControleHorasVooController();
         controller.editarControle();
 
-        // 3. Simular edição do abastecimento (via lista abastecimentosEdicao + backup de IDs)
-        controller.abastecimentosEdicao = new List<Abastecimento__c>{
-            new Abastecimento__c(
-                Quantidade__c = 200,
-                Custo_Unitario__c = 15
-            )
-        };
-        controller.abastecimentoIdsBackup = new List<Id>{ ab.Id };
+        // 3. Editar o registro carregado pela consulta usada pela página.
+        // Isso protege os campos adicionais que o serviço lê antes de persistir.
+        System.assertEquals(1, controller.abastecimentosEdicao.size(),
+            'O abastecimento existente deve ser carregado para edição');
+        controller.abastecimentosEdicao[0].Quantidade__c = 200;
+        controller.abastecimentosEdicao[0].Custo_Unitario__c = 15;
 
         Test.startTest();
         controller.salvarControleHoras();
@@ -864,7 +862,7 @@ public class ControleHorasVooTest {
 
         // 4. Verificar flag no abastecimento
         Abastecimento__c abAtualizado = [
-            SELECT Editado_Manualmente__c, Quantidade__c
+            SELECT Editado_Manualmente__c, Quantidade__c, Custo_Unitario__c, Custo_Total__c
             FROM Abastecimento__c
             WHERE Id = :ab.Id
         ];
@@ -872,6 +870,10 @@ public class ControleHorasVooTest {
             'Edição manual do abastecimento deve setar Editado_Manualmente__c = true');
         System.assertEquals(200, abAtualizado.Quantidade__c,
             'Quantidade corrigida pelo usuário deve ter sido salva');
+        System.assertEquals(15, abAtualizado.Custo_Unitario__c,
+            'Preço do AVGAS corrigido pelo usuário deve ter sido salvo');
+        System.assertEquals(3000, abAtualizado.Custo_Total__c,
+            'Custo total deve ser recalculado com o preço atualizado');
     }
 
     // =============================================================================
