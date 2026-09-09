@@ -88,10 +88,14 @@
         <members>exceljs</members>
         <members>Imagens</members>
         <members>imagesPortalEngemap</members>
-        <!-- icones_svg_slds2 (19 MB) esta no .forceignore: existe na org mas nao
-             e versionado nem deployado daqui. Necessario ao provisionar org nova. -->
-        <members>icones_svg_slds2</members>
         <members>cometd</members>
+        <!-- icones_svg_slds2 NAO entra aqui: 19 MB / 5121 arquivos, fora do git e
+             do .forceignore, mantido apenas na org. A pagina ControleHorasVoo
+             depende dele, entao ao provisionar uma org nova retire-o de uma org
+             que ja o tenha, rodando um retrieve de StaticResource:icones_svg_slds2
+             com as linhas dele comentadas no .forceignore.
+             Lista-lo neste manifest quebra o deploy com "named in package.xml,
+             but was not found in zipped directory". -->
         <name>StaticResource</name>
     </types>
     <types>
