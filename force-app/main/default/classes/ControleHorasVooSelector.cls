@@ -73,7 +73,8 @@ public without sharing class ControleHorasVooSelector {
                    Contato_Alteracao__c, Contato_Alteracao__r.Name,
                    (SELECT Id, Local__c, Origem_Destino__c, Tipo_Combustivel__c,
                            Quantidade__c, Unidade__c, Custo_Unitario__c, Custo_Total__c,
-                           Documento_Referencia__c, Observacoes__c, Faturado__c
+                           Documento_Referencia__c, Observacoes__c, Faturado__c,
+                           Caminho_Anexo__c
                     FROM Abastecimentos__r
                     ORDER BY Id_Abastecimento_Planeit__c ASC NULLS LAST)
             FROM Controle_Horas_Voo__c

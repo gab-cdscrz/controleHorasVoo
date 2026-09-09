@@ -582,6 +582,23 @@
     font-style: italic;
     font-size: 11px;
     }
+    /* Clipe da nota anexada no PlaneIT (coluna Nota Fiscal) */
+    .controle-horas-container .anexo-nota-link {
+    margin-left: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
+    }
+    .controle-horas-container .anexo-nota-link:hover {
+    opacity: 1;
+    }
+    .controle-horas-container .anexo-nota-link[data-carregando="1"] {
+    cursor: progress;
+    opacity: 0.5;
+    }
 
     /* === FORMULÁRIOS === */
     .controle-horas-container .form-row {

@@ -24,6 +24,47 @@
                         { escape: true, timeout: 120000 }
                     );
                 };
+
+                // Download da nota anexada no PlaneIT.
+                // O arquivo fica no storage da Planeit; aqui apenas pedimos uma
+                // URL assinada (válida por 1 hora) e deixamos o navegador baixar.
+                window.ControleHorasVooAnexo = {
+                    baixar: function (abastecimentoId, elemento) {
+                        if (!abastecimentoId) {
+                            return;
+                        }
+                        if (elemento) {
+                            if (elemento.getAttribute('data-carregando') === '1') {
+                                return;
+                            }
+                            elemento.setAttribute('data-carregando', '1');
+                            elemento.innerHTML = '⏳';
+                        }
+
+                        var restaurar = function () {
+                            if (elemento) {
+                                elemento.setAttribute('data-carregando', '0');
+                                elemento.innerHTML = '📎';
+                            }
+                        };
+
+                        Visualforce.remoting.Manager.invokeAction(
+                            '{!$RemoteAction.ControleHorasVooController.obterUrlAnexo}',
+                            abastecimentoId,
+                            function (url) {
+                                restaurar();
+                                if (url) {
+                                    // A URL vem com content-disposition=attachment,
+                                    // então baixa sem tirar o usuário da página.
+                                    window.location.href = url;
+                                } else {
+                                    alert('Não foi possível abrir a nota anexada. Atualize a página e tente novamente.');
+                                }
+                            },
+                            { escape: false, timeout: 30000 }
+                        );
+                    }
+                };
             </script>
             
             <apex:form id="mainForm">
@@ -642,6 +683,12 @@
                                                                                                     <span class="{!IF(ISBLANK(ab.Documento_Referencia__c), 'abast-valor-vazio', '')}">
                                                                                                         <apex:outputText value="{!IF(ISBLANK(ab.Documento_Referencia__c), '—', ab.Documento_Referencia__c)}"/>
                                                                                                     </span>
+                                                                                                    <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
+                                                                                                        <a href="javascript:void(0)"
+                                                                                                           class="anexo-nota-link"
+                                                                                                           title="Baixar a nota anexada no PlaneIT"
+                                                                                                           onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                                                    </apex:outputPanel>
                                                                                                 </td>
                                                                                                 <td>
                                                                                                     <apex:commandLink action="{!alternarFaturamentoAbastecimento}"

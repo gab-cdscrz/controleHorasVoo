@@ -177,6 +177,54 @@ public without sharing class ControleHorasVooController {
             requestJson
         );
     }
+
+    /**
+     * @description Devolve a URL de download da nota anexada ao abastecimento.
+     * A URL é assinada pelo storage da Planeit e expira em 1 hora, por isso é
+     * gerada a cada clique em vez de armazenada.
+     * @param abastecimentoId Id do Abastecimento__c
+     * @return URL de download, ou null se não houver anexo ou sessão válida
+     */
+    @RemoteAction
+    public static String obterUrlAnexo(Id abastecimentoId) {
+        try {
+            // Mesmo critério de sessão usado pelas demais ações da página.
+            if (String.isBlank((String) Session.getValue('idLogin')) || abastecimentoId == null) {
+                return null;
+            }
+
+            List<Abastecimento__c> registros = [
+                SELECT Id, Caminho_Anexo__c, Id_Abastecimento_Planeit__c,
+                       Voo__r.Aeronave__r.Name
+                FROM Abastecimento__c
+                WHERE Id = :abastecimentoId
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+
+            if (registros.isEmpty() || String.isBlank(registros[0].Caminho_Anexo__c)) {
+                return null;
+            }
+
+            Abastecimento__c abastecimento = registros[0];
+            if (abastecimento.Id_Abastecimento_Planeit__c == null ||
+                abastecimento.Voo__r == null ||
+                abastecimento.Voo__r.Aeronave__r == null) {
+                return null;
+            }
+
+            return PlaneitAPIService.gerarUrlAnexo(
+                Integer.valueOf(abastecimento.Id_Abastecimento_Planeit__c),
+                abastecimento.Voo__r.Aeronave__r.Name,
+                abastecimento.Caminho_Anexo__c
+            );
+
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                'Erro ao obter URL do anexo: ' + e.getMessage() + '\n' + e.getStackTraceString());
+            return null;
+        }
+    }
     
     // Classe wrapper para dias do calendário
     public class DiaCalendario {
