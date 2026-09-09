@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Todos_ativos_e_inativos</fullName>
+    <columns>isActive__c</columns>
+    <columns>NAME</columns>
+    <columns>Data_admissao__c</columns>
+    <columns>Data_demissao__c</columns>
+    <columns>Data_de_nascimento__c</columns>
+    <columns>Funcao__c</columns>
+    <columns>Login__c</columns>
+    <columns>email__c</columns>
+    <filterScope>Everything</filterScope>
+    <label>Todos (ativos e inativos)</label>
+</ListView>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Validacao_da_matricula</fullName>
+    <active>true</active>
+    <description>Valida o campo matrícula para ser apenas números</description>
+    <errorConditionFormula>AND(
+not(ISBLANK(Matricula__c)),
+not(ISNUMBER(Matricula__c))
+)</errorConditionFormula>
+    <errorDisplayField>Matricula__c</errorDisplayField>
+    <errorMessage>A matrícula deve conter apenas números</errorMessage>
+</ValidationRule>

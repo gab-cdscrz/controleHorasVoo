@@ -46,3 +46,7 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
+
+# Static resource de icones SLDS (19 MB / 5121 arquivos) - mantido apenas na org
+force-app/main/default/staticresources/icones_svg_slds2/
+force-app/main/default/staticresources/icones_svg_slds2.resource-meta.xml

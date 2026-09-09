@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Acervo_de_HD_Total__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Verifica a permissão para realizar qualquer alteração no acervo de HD presente no extranet</description>
+    <label>Acervo de HD total</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -12,3 +12,8 @@ package.xml
 **/__tests__/**
 
 node_modules/
+
+# Static resource de icones SLDS: 19 MB / 5121 arquivos.
+# Mantido apenas na org - nao versionado nem deployado por este projeto.
+force-app/main/default/staticresources/icones_svg_slds2/**
+force-app/main/default/staticresources/icones_svg_slds2.resource-meta.xml

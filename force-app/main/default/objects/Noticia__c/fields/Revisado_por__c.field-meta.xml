@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Revisado_por__c</fullName>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <label>Revisado por</label>
+    <referenceTo>Empregado__c</referenceTo>
+    <relationshipLabel>Notícias (Revisado por)</relationshipLabel>
+    <relationshipName>Noticias_revisadas</relationshipName>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Redator__c</fullName>
+    <defaultValue>false</defaultValue>
+    <inlineHelpText>Caso seja marcado o usuário pode criar e editar notícias no Extranet</inlineHelpText>
+    <label>Redator</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

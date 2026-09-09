@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Ativa__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>Indica se a inspeção está ativa (true) ou inativa (false). Baseado no campo situacaoInspecao da API (A=ativa, I=inativa)</description>
+    <label>Ativa</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

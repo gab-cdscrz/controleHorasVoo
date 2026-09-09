@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Tipo_de_Contratacao__c</fullName>
+    <label>Tipo de Contratação</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>CLT</fullName>
+                <default>false</default>
+                <label>CLT</label>
+            </value>
+            <value>
+                <fullName>PJ</fullName>
+                <default>false</default>
+                <label>PJ</label>
+            </value>
+            <value>
+                <fullName>CLT+PJ</fullName>
+                <default>false</default>
+                <label>CLT+PJ</label>
+            </value>
+            <value>
+                <fullName>Estágio</fullName>
+                <default>false</default>
+                <label>Estágio</label>
+            </value>
+            <value>
+                <fullName>Aprendiz</fullName>
+                <default>false</default>
+                <label>Aprendiz</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

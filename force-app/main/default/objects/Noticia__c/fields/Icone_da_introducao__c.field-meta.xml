@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Icone_da_introducao__c</fullName>
+    <inlineHelpText>Selecione uma imagem de ícone para ser utilizado na introdução</inlineHelpText>
+    <label>Ícone da introdução</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

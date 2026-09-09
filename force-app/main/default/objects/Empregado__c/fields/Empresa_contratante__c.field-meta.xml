@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Empresa_contratante__c</fullName>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <description>Relaciona a empresa que é responsável pela contratação</description>
+    <inlineHelpText>Empresa responsável pela contratação</inlineHelpText>
+    <label>Empresa contratante</label>
+    <referenceTo>Empresa__c</referenceTo>
+    <relationshipLabel>Empregados</relationshipLabel>
+    <relationshipName>Empregados</relationshipName>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

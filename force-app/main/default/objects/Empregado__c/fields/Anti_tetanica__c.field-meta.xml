@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Anti_tetanica__c</fullName>
+    <inlineHelpText>Coloque a data referente a ultima vacina Anti-tetânica  que o Funcionário tomou</inlineHelpText>
+    <label>Anti-tetânica</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Date</type>
+</CustomField>
