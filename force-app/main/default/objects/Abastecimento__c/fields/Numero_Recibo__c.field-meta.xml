@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Numero_Recibo__c</fullName>
+    <description>Número do comprovante vindo do campo delivery_receipt_code da Planeit. Convive com Documento_Referencia__c: a Planeit oferece os dois campos para a mesma informação e o preenchimento varia por fornecedor, então a tela exibe o que estiver disponível.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Preenchido pela sincronização com a Planeit quando o fornecedor usa o campo de comprovante em vez do documento de referência.</inlineHelpText>
+    <label>Número do Recibo</label>
+    <length>50</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

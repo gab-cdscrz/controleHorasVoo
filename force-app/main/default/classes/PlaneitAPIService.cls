@@ -137,6 +137,11 @@ public without sharing class PlaneitAPIService {
         public Decimal custoTotal;
         public String codigoMoeda;
         public String documentoReferencia; // Vai para campo Notas
+        // A Planeit oferece dois campos para o numero da nota e o uso varia por
+        // fornecedor: uns preenchem documentoReferencia (texto livre), outros
+        // delivery_receipt_code (numero) com o fornecedor em observacoes.
+        public String delivery_receipt_code;
+        public String horaAbastecimento;
         public String observacoes;
     }
     
@@ -171,6 +176,7 @@ public without sharing class PlaneitAPIService {
         public String custoTotal;
         public String codigoMoeda;
         public String documentoReferencia;
+        public String delivery_receipt_code;
         public String observacoes;
     }
 
@@ -922,6 +928,8 @@ public without sharing class PlaneitAPIService {
         ab.Custo_Unitario__c      = abData.custoUnidade;
         ab.Custo_Total__c         = abData.custoTotal;
         ab.Documento_Referencia__c = abData.documentoReferencia;
+        ab.Numero_Recibo__c       = abData.delivery_receipt_code;
+        ab.Hora_Abastecimento__c  = converterStringParaTime(abData.horaAbastecimento);
         ab.Observacoes__c         = abData.observacoes;
         
         if (String.isNotBlank(abData.dataVoo)) {
@@ -966,6 +974,8 @@ public without sharing class PlaneitAPIService {
         ab.Custo_Unitario__c       = converterStringParaDecimal(avData.custoUnidade);
         ab.Custo_Total__c          = converterStringParaDecimal(avData.custoTotal);
         ab.Documento_Referencia__c = avData.documentoReferencia;
+        ab.Numero_Recibo__c        = avData.delivery_receipt_code;
+        ab.Hora_Abastecimento__c   = converterStringParaTime(avData.horaAbastecimento);
         ab.Observacoes__c          = avData.observacoes;
 
         if (String.isNotBlank(avData.dataAbastecimento)) {
@@ -1313,6 +1323,7 @@ public without sharing class PlaneitAPIService {
      * @param timeString String no formato "14:30:00"
      * @return Time object ou null se inválido
      */
+    @TestVisible
     private static Time converterStringParaTime(String timeString) {
         if (String.isBlank(timeString)) {
             return null;

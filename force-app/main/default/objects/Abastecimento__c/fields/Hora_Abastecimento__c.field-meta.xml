@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Hora_Abastecimento__c</fullName>
+    <description>Hora do abastecimento informada pela Planeit (campo horaAbastecimento). Só é preenchida nos abastecimentos que chegam pelo endpoint dedicado /aeronave/abastecimentos, usado para os avulsos: o abastecimento aninhado na resposta de voos não traz esse campo. Fica vazia na maioria dos registros vinculados a voo.</description>
+    <inlineHelpText>Preenchida apenas quando a Planeit informa a hora, o que ocorre nos abastecimentos avulsos.</inlineHelpText>
+    <label>Hora do Abastecimento</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Time</type>
+</CustomField>

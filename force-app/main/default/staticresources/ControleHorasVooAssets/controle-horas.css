@@ -582,6 +582,14 @@
     font-style: italic;
     font-size: 11px;
     }
+    /* Fornecedor do abastecimento, abaixo do número da nota */
+    .controle-horas-container .abast-fornecedor {
+    display: block;
+    color: #6c757d;
+    font-size: 10px;
+    line-height: 1.3;
+    margin-top: 2px;
+    }
     /* Clipe da nota anexada no PlaneIT (coluna Nota Fiscal) */
     .controle-horas-container .anexo-nota-link {
     margin-left: 6px;

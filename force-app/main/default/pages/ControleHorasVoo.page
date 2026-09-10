@@ -682,14 +682,21 @@
                                                                                                     </apex:outputPanel>
                                                                                                 </td>
                                                                                                 <td>
-                                                                                                    <span class="{!IF(ISBLANK(ab.Documento_Referencia__c), 'abast-valor-vazio', '')}">
-                                                                                                        <apex:outputText value="{!IF(ISBLANK(ab.Documento_Referencia__c), '—', ab.Documento_Referencia__c)}"/>
+                                                                                                    <!-- A Planeit usa documentoReferencia ou delivery_receipt_code
+                                                                                                         conforme o fornecedor; exibimos o que vier preenchido. -->
+                                                                                                    <span class="{!IF(AND(ISBLANK(ab.Documento_Referencia__c), ISBLANK(ab.Numero_Recibo__c)), 'abast-valor-vazio', '')}">
+                                                                                                        <apex:outputText value="{!IF(NOT(ISBLANK(ab.Documento_Referencia__c)), ab.Documento_Referencia__c, IF(NOT(ISBLANK(ab.Numero_Recibo__c)), ab.Numero_Recibo__c, '—'))}"/>
                                                                                                     </span>
                                                                                                     <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
                                                                                                         <a href="javascript:void(0)"
                                                                                                            class="anexo-nota-link"
                                                                                                            title="Baixar a nota anexada no PlaneIT"
                                                                                                            onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                                                    </apex:outputPanel>
+                                                                                                    <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Observacoes__c))}" layout="block">
+                                                                                                        <span class="abast-fornecedor">
+                                                                                                            <apex:outputText value="{!ab.Observacoes__c}"/>
+                                                                                                        </span>
                                                                                                     </apex:outputPanel>
                                                                                                 </td>
                                                                                                 <td>
