@@ -17,9 +17,11 @@ public with sharing class PlaneitAnexoSyncQueueable implements Queueable, Databa
 
     // Abastecimentos mais antigos que isso não recebem mais anexo na prática.
     private static final Integer JANELA_DIAS = 90;
-    // Quem já foi verificado e não tinha anexo é reconsultado após este intervalo,
-    // para capturar notas anexadas depois do lançamento.
-    private static final Integer REVERIFICAR_APOS_DIAS = 7;
+    // Quem já foi verificado e não tinha anexo é reconsultado no dia seguinte.
+    // A operação é diária: o piloto lança o abastecimento e anexa a nota depois,
+    // às vezes dias depois, então um reteste semanal esconderia a nota por uma
+    // semana. Com 1 dia, qualquer nota aparece na tela em até 24 horas.
+    private static final Integer REVERIFICAR_APOS_DIAS = 1;
 
     @TestVisible
     private static Boolean suppressContinuationInTests = false;
