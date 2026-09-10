@@ -624,6 +624,102 @@
     50% { opacity: 1; }
     }
 
+    /* === VISUALIZADOR DA NOTA ANEXADA ===
+       Fica acima do modal de detalhes do voo, que já usa z-index alto. */
+    .anexo-visualizador {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    }
+    .anexo-visualizador[hidden] {
+    display: none;
+    }
+    .anexo-visualizador-fundo {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    }
+    .anexo-visualizador-caixa {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-width: min(1100px, 95vw);
+    max-height: 92vh;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    }
+    .anexo-visualizador-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    background: #f4f6f9;
+    border-bottom: 1px solid #dfe3e8;
+    }
+    .anexo-visualizador-titulo {
+    font-size: 12px;
+    font-weight: 600;
+    color: #16325c;
+    word-break: break-all;
+    }
+    .anexo-visualizador-acoes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    }
+    .anexo-visualizador-botao {
+    font-size: 11px;
+    padding: 5px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+    }
+    .anexo-visualizador-fechar {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: #54698d;
+    cursor: pointer;
+    padding: 0 4px;
+    }
+    .anexo-visualizador-fechar:hover {
+    color: #16325c;
+    }
+    .anexo-visualizador-corpo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    padding: 12px;
+    overflow: auto;
+    background: #22252a;
+    }
+    .anexo-visualizador-carregando {
+    color: #e8ecf1;
+    font-size: 12px;
+    text-align: center;
+    }
+    .anexo-visualizador-carregando[hidden] {
+    display: none;
+    }
+    .anexo-visualizador-imagem {
+    max-width: 100%;
+    max-height: calc(92vh - 90px);
+    object-fit: contain;
+    display: block;
+    }
+    .anexo-visualizador-imagem[hidden] {
+    display: none;
+    }
+
     /* === FORMULÁRIOS === */
     .controle-horas-container .form-row {
     display: flex;
