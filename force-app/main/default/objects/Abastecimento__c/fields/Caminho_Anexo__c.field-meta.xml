@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Caminho_Anexo__c</fullName>
+    <description>Caminho do anexo da nota no storage da Planeit, no formato anexos/{matricula}/Abastecimento/{idPlaneit}/{arquivo}. Preenchido pela sincronização. Não guarda a URL de download: ela é assinada e expira em 1 hora, sendo gerada sob demanda pelo endpoint /anexos/url no momento do clique.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Preenchido automaticamente pela sincronização com a Planeit. O arquivo permanece na Planeit; aqui guardamos apenas a referência.</inlineHelpText>
+    <label>Caminho do Anexo</label>
+    <length>255</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

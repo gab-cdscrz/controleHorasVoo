@@ -282,144 +282,13 @@
     }
     }
 
-    /* === VISUALIZAÇÃO HIERÁRQUICA === */
-    .controle-horas-container .aeronave-group {
-    margin-bottom: 25px;
-    border: 1px solid var(--cor-borda);
-    border-radius: var(--borda-radius);
-    overflow: hidden;
-    }
-
-    .controle-horas-container .aeronave-header {
-    background: linear-gradient(135deg, var(--cor-primaria), #004a66);
-    color: white;
-    padding: var(--espacamento-padrao) 20px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-    transition: background 0.3s ease;
-    }
-
-    .controle-horas-container .aeronave-header:hover {
-    background: linear-gradient(135deg, #004a66, #006699);
-    }
-
-    .controle-horas-container .aeronave-content {
-    background: white;
-    }
-
-    .controle-horas-container .ano-group {
-    border-top: 1px solid #e9ecef;
-    }
-
-    .controle-horas-container .ano-header {
-    background: var(--cor-fundo);
-    padding: 12px 40px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-    color: var(--cor-primaria);
-    transition: var(--transicao-padrao);
-    }
-
-    .controle-horas-container .ano-header:hover {
-    background: var(--cor-fundo-hover);
-    }
-
-    .controle-horas-container .mes-header {
-    background: #fefefe;
-    padding: 10px 40px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-    color: #495057;
-    transition: var(--transicao-padrao);
-    }
-
-    .controle-horas-container .mes-header:hover {
-    background: var(--cor-fundo);
-    }
-
-    /* Totais e detalhes */
-    .controle-horas-container .ano-totals,
-    .controle-horas-container .mes-totals {
-    font-size: 12px;
-    color: var(--cor-texto-secundario);
-    font-weight: normal;
-    }
-
-    .controle-horas-container .mes-totals {
-    font-size: 11px;
-    color: #868e96;
-    }
-
-    .controle-horas-container .controle-item {
-    padding: var(--espacamento-padrao) 40px;
-    border-top: 1px solid var(--cor-fundo);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: var(--transicao-padrao);
-    }
-
     /* Reduzir ainda mais em tablets */
-    @media (max-width: 992px) {
-    .controle-horas-container .controle-item {
-    padding: var(--espacamento-padrao) 25px;
-    }
-    }
-
-    .controle-horas-container .controle-item:hover {
-    background: #f0f8ff;
-    }
-
-    .controle-horas-container .controle-main {
-    flex: 1;
-    }
-
-    .controle-horas-container .controle-data {
-    font-weight: bold;
-    color: var(--cor-primaria);
-    margin-bottom: 3px;
-    }
-
-    .controle-horas-container .controle-detalhes {
-    font-size: 13px;
-    color: var(--cor-texto-secundario);
-    line-height: 1.3;
-    }
-
-    .controle-horas-container .expand-icon {
-    font-family: monospace;
-    font-size: 16px;
-    margin-right: 10px;
-    transition: transform 0.3s ease;
-    display: inline-block;
-    min-width: 16px;
-    }
-
-    /* Fallback para ícones */
-    .controle-horas-container .expand-icon:empty::before {
-    content: '▼';
-    }
 
     /* Estado vazio */
     .controle-horas-container .empty-state {
     text-align: center;
     padding: 40px 20px;
     color: var(--cor-texto-secundario);
-    }
-
-    .controle-horas-container .empty-state-icon {
-    font-size: 48px;
-    color: #dee2e6;
-    margin-bottom: var(--espacamento-padrao);
     }
 
     /* === NOVO VOO === */
@@ -568,19 +437,182 @@
     color: #92400e;
     border: 1px solid #fcd34d;
     }
-    .controle-horas-container .abast-badge {
-    font-size: 10px;
-    background: #e9ecef;
-    color: #495057;
-    padding: 1px 5px;
-    border-radius: 8px;
-    font-weight: 600;
-    margin-left: 2px;
-    }
     .controle-horas-container .abast-valor-vazio {
     color: #ced4da;
     font-style: italic;
     font-size: 11px;
+    }
+    /* Fornecedor do abastecimento, abaixo do número da nota */
+    .controle-horas-container .abast-fornecedor {
+    display: block;
+    color: #6c757d;
+    font-size: 10px;
+    line-height: 1.3;
+    margin-top: 2px;
+    }
+    /* Clipe da nota anexada no PlaneIT (coluna Nota Fiscal).
+       Ícone SLDS utility/attach embutido como SVG: emoji não renderiza em
+       todas as fontes e o SVG herda a cor do texto. */
+    .controle-horas-container .anexo-nota-link {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    text-decoration: none;
+    line-height: 1;
+    cursor: pointer;
+    color: #0b5cab;
+    vertical-align: middle;
+    }
+    .controle-horas-container .anexo-nota-icone {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+    opacity: 0.8;
+    transition: opacity 0.15s ease;
+    }
+    .controle-horas-container .anexo-nota-link:hover .anexo-nota-icone {
+    opacity: 1;
+    }
+    .controle-horas-container .anexo-nota-link[data-carregando="1"] {
+    cursor: progress;
+    }
+    .controle-horas-container .anexo-nota-link[data-carregando="1"] .anexo-nota-icone {
+    animation: anexo-nota-pulso 0.9s ease-in-out infinite;
+    }
+    @keyframes anexo-nota-pulso {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
+    }
+
+    /* === VISUALIZADOR DA NOTA ANEXADA ===
+       Fica acima do modal de detalhes do voo, que já usa z-index alto. */
+    .anexo-visualizador {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    }
+    .anexo-visualizador[hidden] {
+    display: none;
+    }
+    .anexo-visualizador-fundo {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    }
+    .anexo-visualizador-caixa {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    max-width: min(1100px, 95vw);
+    max-height: 92vh;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    }
+    .anexo-visualizador-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 14px;
+    background: #f4f6f9;
+    border-bottom: 1px solid #dfe3e8;
+    }
+    .anexo-visualizador-titulo {
+    font-size: 12px;
+    font-weight: 600;
+    color: #16325c;
+    word-break: break-all;
+    }
+    .anexo-visualizador-acoes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    }
+    /* Estilo próprio: o visualizador vive fora de .controle-horas-container,
+       onde .btn e .loading estão escopadas, então não pode reusá-las. */
+    .anexo-visualizador-botao {
+    font-size: 11px;
+    padding: 5px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid #c9cdd3;
+    border-radius: 4px;
+    background: #fff;
+    color: #16325c;
+    line-height: 1.6;
+    cursor: pointer;
+    }
+    .anexo-visualizador-botao:hover {
+    background: #f0f3f7;
+    color: #16325c;
+    text-decoration: none;
+    }
+    .anexo-visualizador-botao-primario {
+    background: #0b5cab;
+    border-color: #0b5cab;
+    color: #fff;
+    }
+    .anexo-visualizador-botao-primario:hover {
+    background: #094a8c;
+    border-color: #094a8c;
+    color: #fff;
+    }
+    .anexo-visualizador-spinner {
+    width: 26px;
+    height: 26px;
+    margin: 0 auto 8px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: anexo-visualizador-girar 0.8s linear infinite;
+    }
+    @keyframes anexo-visualizador-girar {
+    to { transform: rotate(360deg); }
+    }
+    .anexo-visualizador-fechar {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: #54698d;
+    cursor: pointer;
+    padding: 0 4px;
+    }
+    .anexo-visualizador-fechar:hover {
+    color: #16325c;
+    }
+    .anexo-visualizador-corpo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    padding: 12px;
+    overflow: auto;
+    background: #22252a;
+    }
+    .anexo-visualizador-carregando {
+    color: #e8ecf1;
+    font-size: 12px;
+    text-align: center;
+    }
+    .anexo-visualizador-carregando[hidden] {
+    display: none;
+    }
+    .anexo-visualizador-imagem {
+    max-width: 100%;
+    max-height: calc(92vh - 90px);
+    object-fit: contain;
+    display: block;
+    }
+    .anexo-visualizador-imagem[hidden] {
+    display: none;
     }
 
     /* === FORMULÁRIOS === */
@@ -811,97 +843,7 @@
     align-items: center;
     }
 
-    /* Seção de cálculos técnicos redesenhada */
-    .controle-horas-container .calculos-tecnicos-section {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: var(--borda-radius);
-    margin-top: 24px;
-    box-shadow: var(--sombra-card);
-    overflow: hidden;
-    }
-
-    .controle-horas-container .calculos-tecnicos-body {
-    padding: 24px;
-    }
-
-    .controle-horas-container .calculos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 20px;
-    }
-
     /* Otimização para telas grandes */
-    @media (min-width: 1400px) {
-    .controle-horas-container .calculos-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 24px;
-    }
-    }
-
-    .controle-horas-container .calculo-item {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-    border: 1px solid #e9ecef;
-    transition: var(--transicao-padrao);
-    }
-
-    .controle-horas-container .calculo-item:hover {
-    background: #f0f4f8;
-    border-color: var(--cor-secundaria);
-    }
-
-    .controle-horas-container .calculo-item-label {
-    font-size: 12px;
-    color: var(--cor-texto-secundario);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-    font-weight: 500;
-    }
-
-    .controle-horas-container .calculo-item-valor {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--cor-primaria);
-    line-height: 1.2;
-    }
-
-    .controle-horas-container .calculo-item-unidade {
-    font-size: 14px;
-    color: var(--cor-texto-secundario);
-    font-weight: 400;
-    margin-left: 4px;
-    }
-
-    /* Alerta informativo moderno */
-    .controle-horas-container .info-banner {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    background: #e3f2fd;
-    border-radius: 8px;
-    border-left: 4px solid #2196f3;
-    margin-bottom: 20px;
-    }
-
-    .controle-horas-container .info-banner-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-    }
-
-    .controle-horas-container .info-banner-text {
-    font-size: 13px;
-    color: #1565c0;
-    line-height: 1.5;
-    }
-
-    .controle-horas-container .info-banner-text strong {
-    font-weight: 600;
-    }
 
     /* Card de intervalo de inspeção */
     .controle-horas-container .intervalo-card {
@@ -1019,21 +961,8 @@
     .controle-horas-container .controle-tecnico-grid {
     grid-template-columns: 1fr;
     }
-
-    .controle-horas-container .calculos-grid {
-    grid-template-columns: 1fr 1fr;
     }
 
-    .controle-horas-container .calculo-item-valor {
-    font-size: 20px;
-    }
-    }
-
-    @media (max-width: 480px) {
-    .controle-horas-container .calculos-grid {
-    grid-template-columns: 1fr;
-    }
-    }
 
     /* Layout de grade */
     .controle-horas-container .row {
@@ -1079,39 +1008,10 @@
     width: 100%;
     text-align: center;
     }
-
-    .controle-horas-container .controle-item {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: var(--espacamento-padrao) 40px;
-    }
-
-    .controle-horas-container .mes-header,
-    .controle-horas-container .ano-header {
-    padding-left: 20px;
-    padding-right: 15px;
-    }
-
-    .controle-horas-container .controle-item {
-    padding: var(--espacamento-padrao) 20px;
-    }
     }
 
     /* Telas muito pequenas - ajustes adicionais */
     @media (max-width: 480px) {
-    .controle-horas-container .ano-header {
-    padding: 10px 15px;
-    font-size: 14px;
-    }
-
-    .controle-horas-container .mes-header {
-    padding: 8px 15px;
-    font-size: 13px;
-    }
-
-    .controle-horas-container .controle-item {
-    padding: 12px 15px;
-    }
 
     .controle-horas-container .main-container {
     padding: 10px;
@@ -1140,12 +1040,6 @@
     background-color: #e3f2fd;
     border: 1px solid #2196f3;
     color: #1565c0;
-    }
-
-    .controle-horas-container .alert-warning {
-    background-color: #fff3cd;
-    border: 1px solid #ffc107;
-    color: #856404;
     }
 
     /* Estilos para calendário */
@@ -1801,10 +1695,6 @@
     gap: 10px;
     }
 
-    .inspecoes-proximas-header .icon-wrench {
-    font-size: 24px;
-    }
-
     .inspecoes-proximas-header .subtitle {
     margin: 0;
     font-size: 13px;
@@ -1926,29 +1816,6 @@
     font-size: 14px;
     font-weight: 700;
     color: #28a745;
-    }
-
-    .inspecoes-link {
-    text-align: center;
-    padding-top: 12px;
-    border-top: 1px solid #e9ecef;
-    }
-
-    .inspecoes-link .ver-todas {
-    color: var(--cor-primaria);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    }
-
-    .inspecoes-link .ver-todas:hover {
-    color: var(--cor-secundaria);
-    text-decoration: underline;
-    gap: 10px;
     }
 
     /* Responsividade para cards de inspeção */
@@ -2167,18 +2034,6 @@
     .controle-horas-container .btn-success:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
-    }
-
-    .controle-horas-container .btn-warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border: none;
-    color: white;
-    transition: all 0.3s ease;
-    }
-
-    .controle-horas-container .btn-warning:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
     }
 
     /* ===================================================================
@@ -2742,8 +2597,7 @@
 
 .controle-horas-container .btn,
 .controle-horas-container .tab-button,
-.controle-horas-container .btn-sincronizar-ghost,
-.controle-horas-container .aircraft-button {
+.controle-horas-container .btn-sincronizar-ghost {
     min-height: 2.5rem;
     border-radius: 4px;
     transition: background-color 160ms ease, border-color 160ms ease,

@@ -226,6 +226,10 @@ private class PlaneitScheduledSyncTest {
 
     @IsTest
     static void queueableLogsAircraftThatBecameIneligible() {
+        // A cadeia termina enfileirando a descoberta de anexos, e em contexto de
+        // teste o Apex nao permite esse encadeamento a partir de um job em
+        // execucao. Este teste verifica o log, nao a continuacao.
+        PlaneitAircraftSyncQueueable.suppressContinuationInTests = true;
         Aeronave__c aircraft = createAircraft('PT-API', 1599, 'Propria');
         aircraft.Id_Planeit__c = null;
         update aircraft;
@@ -293,6 +297,40 @@ private class PlaneitScheduledSyncTest {
         queueable.enqueueContinuation(success);
 
         Assert.areEqual(2, Limits.getQueueableJobs(), 'Retry e próxima aeronave devem gerar um job cada.');
+        PlaneitAircraftSyncQueueable.suppressContinuationInTests = true;
+    }
+
+    @IsTest
+    static void continuationEnqueuesAttachmentSyncAtEndOfChain() {
+        PlaneitAircraftSyncQueueable.suppressContinuationInTests = false;
+        Aeronave__c onlyAircraft = createAircraft('PT-END', 1601, 'Propria');
+        // currentIndex aponta para a ultima aeronave da lista.
+        PlaneitAircraftSyncQueueable queueable = new PlaneitAircraftSyncQueueable(
+            new List<Id>{ onlyAircraft.Id },
+            0,
+            Date.today().addDays(-7),
+            Date.today(),
+            'Agendado',
+            1
+        );
+
+        SincronizarVoosResponse success = new SincronizarVoosResponse();
+        success.sucesso = true;
+        success.podeTentarNovamente = false;
+
+        // Sem abastecimentos elegiveis, a descoberta de anexos encerra sem
+        // callout - por isso o job pode rodar de verdade dentro do teste.
+        Test.startTest();
+        queueable.enqueueContinuation(success);
+        Test.stopTest();
+
+        List<AsyncApexJob> jobs = [
+            SELECT Id
+            FROM AsyncApexJob
+            WHERE ApexClass.Name = 'PlaneitAnexoSyncQueueable'
+        ];
+        Assert.areEqual(1, jobs.size(),
+            'Ao terminar as aeronaves, a cadeia deve seguir para a descoberta de anexos.');
         PlaneitAircraftSyncQueueable.suppressContinuationInTests = true;
     }
 

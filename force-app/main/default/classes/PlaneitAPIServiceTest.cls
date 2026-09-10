@@ -55,7 +55,8 @@ private class PlaneitAPIServiceTest {
                             '"quantidade": 257.00,' +
                             '"custoUnidade": 13.40,' +
                             '"custoTotal": 3443.80,' +
-                            '"documentoReferencia": "NF 12345"' +
+                            '"documentoReferencia": "NF 12345",' +
+                            '"delivery_receipt_code": "778899"' +
                         '}]' +
                     '}]' +
                 '}');
@@ -729,13 +730,16 @@ private class PlaneitAPIServiceTest {
         // Assert
         System.assertEquals(true, resultados[0].sucesso, 'Deve ter sucesso');
         
-        List<Abastecimento__c> abastecimentos = [SELECT Quantidade__c, Custo_Unitario__c, Custo_Total__c, Documento_Referencia__c 
+        List<Abastecimento__c> abastecimentos = [SELECT Quantidade__c, Custo_Unitario__c, Custo_Total__c, Documento_Referencia__c,
+                                                         Numero_Recibo__c
                                                   FROM Abastecimento__c];
         System.assertEquals(1, abastecimentos.size(), 'Deve criar 1 abastecimento');
         System.assertEquals(257.00, abastecimentos[0].Quantidade__c, 'Litros deve ser 257');
         System.assertEquals(13.40, abastecimentos[0].Custo_Unitario__c, 'Valor unitário deve ser 13.40');
         System.assertEquals(3443.80, abastecimentos[0].Custo_Total__c, 'Total deve ser 3443.80');
         System.assertEquals('NF 12345', abastecimentos[0].Documento_Referencia__c, 'Documento deve ser NF 12345');
+        System.assertEquals('778899', abastecimentos[0].Numero_Recibo__c,
+            'O numero de recibo da Planeit (delivery_receipt_code) deve ser mapeado');
     }
     
     @IsTest
@@ -2026,5 +2030,24 @@ private class PlaneitAPIServiceTest {
         ];
         System.assertEquals(operador.Id, voo.Operador__c, 'Operador interno deve continuar sendo vinculado');
         System.assertEquals(null, voo.Operador_Externo__c, 'Operador interno não deve receber tag de externo');
+    }
+    @IsTest
+    static void deveConverterHoraDaPlaneit() {
+        System.assertEquals(Time.newInstance(18, 34, 0, 0),
+            PlaneitAPIService.converterStringParaTime('18:34:00'),
+            'Hora completa deve ser convertida');
+        System.assertEquals(Time.newInstance(7, 5, 0, 0),
+            PlaneitAPIService.converterStringParaTime('07:05'),
+            'Hora sem segundos deve ser aceita');
+        System.assertEquals(null, PlaneitAPIService.converterStringParaTime(null),
+            'Hora ausente deve virar nulo');
+        // Time.newInstance faz overflow em vez de recusar: 25h vira 01h. A API
+        // nunca envia hora fora do intervalo, entao o comportamento fica como
+        // esta - o metodo tambem converte Acionamento__c e Corte__c dos voos.
+        System.assertEquals(Time.newInstance(1, 0, 0, 0),
+            PlaneitAPIService.converterStringParaTime('25:00:00'),
+            'Hora fora do intervalo sofre overflow, sem lancar excecao');
+        System.assertEquals(null, PlaneitAPIService.converterStringParaTime('abc'),
+            'Valor invalido deve virar nulo');
     }
 }

@@ -9,6 +9,7 @@
     <apex:composition template="HomePage">
         <apex:define name="content_body">
             <script>
+                window.controleHorasVooAccessToken = '{!JSENCODE(relatorioAccessToken)}';
                 window.controleHorasVooReportLibraryUrl =
                     '{!JSENCODE($Resource.exceljs)}';
                 window.gerarRelatorioHorasVooRemoto = function (
@@ -24,6 +25,161 @@
                         { escape: true, timeout: 120000 }
                     );
                 };
+
+                // Download da nota anexada no PlaneIT.
+                // O arquivo fica no storage da Planeit; aqui apenas pedimos uma
+                // URL assinada (válida por 1 hora) e deixamos o navegador baixar.
+                // Visualizador da nota anexada no PlaneIT.
+                // O arquivo mora no storage da Planeit; pedimos uma URL assinada
+                // (valida por 1 hora) e a exibimos sem copiar nada para ca.
+                window.ControleHorasVooAnexo = (function () {
+                    var TTL_MS = 50 * 60 * 1000;   // margem sobre a validade de 1h
+                    var cache = {};                // abastecimentoId -> { url, expiraEm }
+                    var EXTENSOES_IMAGEM = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+
+                    function elemento(id) {
+                        return document.getElementById(id);
+                    }
+
+                    function extensaoDe(caminho) {
+                        if (!caminho) {
+                            return '';
+                        }
+                        var pedacos = caminho.split('.');
+                        return pedacos.length > 1 ? pedacos.pop().toLowerCase() : '';
+                    }
+
+                    function nomeDe(caminho) {
+                        if (!caminho) {
+                            return 'Nota anexada';
+                        }
+                        var partes = caminho.split('/');
+                        return partes[partes.length - 1];
+                    }
+
+                    function ehImagem(caminho) {
+                        return EXTENSOES_IMAGEM.indexOf(extensaoDe(caminho)) !== -1;
+                    }
+
+                    function urlEmCache(abastecimentoId) {
+                        var registro = cache[abastecimentoId];
+                        if (registro && registro.expiraEm > Date.now()) {
+                            return registro.url;
+                        }
+                        delete cache[abastecimentoId];
+                        return null;
+                    }
+
+                    function obterUrl(abastecimentoId, aoConcluir) {
+                        var emCache = urlEmCache(abastecimentoId);
+                        if (emCache) {
+                            aoConcluir(emCache);
+                            return;
+                        }
+                        Visualforce.remoting.Manager.invokeAction(
+                            '{!$RemoteAction.ControleHorasVooController.obterUrlAnexo}',
+                            window.controleHorasVooAccessToken,
+                            abastecimentoId,
+                            function (url) {
+                                if (url) {
+                                    cache[abastecimentoId] = {
+                                        url: url,
+                                        expiraEm: Date.now() + TTL_MS
+                                    };
+                                }
+                                aoConcluir(url);
+                            },
+                            { escape: false, timeout: 30000 }
+                        );
+                    }
+
+                    function aoTeclar(evento) {
+                        if (evento.key === 'Escape') {
+                            fechar();
+                        }
+                    }
+
+                    function fechar() {
+                        var painel = elemento('anexoVisualizador');
+                        var imagem = elemento('anexoVisualizadorImagem');
+                        if (painel) {
+                            painel.hidden = true;
+                        }
+                        if (imagem) {
+                            // Interrompe o download em andamento ao fechar.
+                            imagem.removeAttribute('src');
+                            imagem.hidden = true;
+                        }
+                        document.removeEventListener('keydown', aoTeclar);
+                    }
+
+                    function exibir(url, caminho) {
+                        var painel = elemento('anexoVisualizador');
+                        var imagem = elemento('anexoVisualizadorImagem');
+                        var carregando = elemento('anexoVisualizadorCarregando');
+                        var titulo = elemento('anexoVisualizadorTitulo');
+                        var baixar = elemento('anexoVisualizadorBaixar');
+                        var novaAba = elemento('anexoVisualizadorNovaAba');
+
+                        if (!painel || !imagem) {
+                            window.open(url, '_blank');
+                            return;
+                        }
+
+                        titulo.textContent = nomeDe(caminho);
+                        baixar.href = url;
+                        novaAba.href = url;
+                        imagem.hidden = true;
+                        carregando.hidden = false;
+                        painel.hidden = false;
+                        document.addEventListener('keydown', aoTeclar);
+
+                        imagem.onload = function () {
+                            carregando.hidden = true;
+                            imagem.hidden = false;
+                        };
+                        // Se o navegador recusar renderizar (o storage entrega o
+                        // arquivo como anexo), cai para a aba nova em vez de
+                        // deixar o usuario sem acesso.
+                        imagem.onerror = function () {
+                            fechar();
+                            window.open(url, '_blank');
+                        };
+                        imagem.src = url;
+                    }
+
+                    function abrir(abastecimentoId, caminho, gatilho) {
+                        if (!abastecimentoId) {
+                            return;
+                        }
+                        if (gatilho) {
+                            if (gatilho.getAttribute('data-carregando') === '1') {
+                                return;
+                            }
+                            // Alterna atributo em vez de trocar innerHTML, que
+                            // destruiria o SVG do icone.
+                            gatilho.setAttribute('data-carregando', '1');
+                        }
+
+                        obterUrl(abastecimentoId, function (url) {
+                            if (gatilho) {
+                                gatilho.setAttribute('data-carregando', '0');
+                            }
+                            if (!url) {
+                                alert('Nao foi possivel abrir a nota anexada. Atualize a pagina e tente novamente.');
+                                return;
+                            }
+                            if (ehImagem(caminho)) {
+                                exibir(url, caminho);
+                            } else {
+                                // Nao e imagem: entrega o arquivo direto.
+                                window.location.href = url;
+                            }
+                        });
+                    }
+
+                    return { abrir: abrir, fechar: fechar };
+                })();
             </script>
             
             <apex:form id="mainForm">
@@ -639,9 +795,22 @@
                                                                                                     </apex:outputPanel>
                                                                                                 </td>
                                                                                                 <td>
-                                                                                                    <span class="{!IF(ISBLANK(ab.Documento_Referencia__c), 'abast-valor-vazio', '')}">
-                                                                                                        <apex:outputText value="{!IF(ISBLANK(ab.Documento_Referencia__c), '—', ab.Documento_Referencia__c)}"/>
+                                                                                                    <!-- A Planeit usa documentoReferencia ou delivery_receipt_code
+                                                                                                         conforme o fornecedor; exibimos o que vier preenchido. -->
+                                                                                                    <span class="{!IF(AND(ISBLANK(ab.Documento_Referencia__c), ISBLANK(ab.Numero_Recibo__c)), 'abast-valor-vazio', '')}">
+                                                                                                        <apex:outputText value="{!IF(NOT(ISBLANK(ab.Documento_Referencia__c)), ab.Documento_Referencia__c, IF(NOT(ISBLANK(ab.Numero_Recibo__c)), ab.Numero_Recibo__c, '—'))}"/>
                                                                                                     </span>
+                                                                                                    <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
+                                                                                                        <a href="javascript:void(0)"
+                                                                                                           class="anexo-nota-link"
+                                                                                                           title="Baixar a nota anexada no PlaneIT"
+                                                                                                           onclick="ControleHorasVooAnexo.abrir('{!JSENCODE(ab.Id)}', '{!JSENCODE(ab.Caminho_Anexo__c)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
+                                                                                                    </apex:outputPanel>
+                                                                                                    <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Observacoes__c))}" layout="block">
+                                                                                                        <span class="abast-fornecedor">
+                                                                                                            <apex:outputText value="{!ab.Observacoes__c}"/>
+                                                                                                        </span>
+                                                                                                    </apex:outputPanel>
                                                                                                 </td>
                                                                                                 <td>
                                                                                                     <apex:commandLink action="{!alternarFaturamentoAbastecimento}"
@@ -1247,6 +1416,12 @@
                                                         <div class="form-row">
                                                             <div class="form-group half-width">
                                                                 <label class="form-label">Documento de Referência</label>
+                                                                <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
+                                                                    <a href="javascript:void(0)"
+                                                                       class="anexo-nota-link"
+                                                                       title="Baixar a nota anexada no PlaneIT"
+                                                                       onclick="ControleHorasVooAnexo.abrir('{!JSENCODE(ab.Id)}', '{!JSENCODE(ab.Caminho_Anexo__c)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
+                                                                </apex:outputPanel>
                                                                 <apex:inputTextarea value="{!ab.Documento_Referencia__c}" 
                                                                                     styleClass="form-control"
                                                                                     style="resize: vertical; min-height: 70px;"
@@ -1316,6 +1491,12 @@
                                                         <div class="form-row">
                                                             <div class="form-group half-width">
                                                                 <label class="form-label">Documento de Referência</label>
+                                                                <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
+                                                                    <a href="javascript:void(0)"
+                                                                       class="anexo-nota-link"
+                                                                       title="Baixar a nota anexada no PlaneIT"
+                                                                       onclick="ControleHorasVooAnexo.abrir('{!JSENCODE(ab.Id)}', '{!JSENCODE(ab.Caminho_Anexo__c)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
+                                                                </apex:outputPanel>
                                                                 <apex:outputText value="{!IF(ab.Documento_Referencia__c != null, ab.Documento_Referencia__c, '-- Não informado --')}"
                                                                                  styleClass="form-control readonly-field"
                                                                                  style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"/>
@@ -1426,6 +1607,12 @@
                                                 <div class="form-row">
                                                     <div class="form-group half-width">
                                                         <label class="form-label">Documento de Referência</label>
+                                                        <apex:outputPanel rendered="{!NOT(ISBLANK(abastecimentoAtual.Caminho_Anexo__c))}" layout="none">
+                                                            <a href="javascript:void(0)"
+                                                               class="anexo-nota-link"
+                                                               title="Baixar a nota anexada no PlaneIT"
+                                                               onclick="ControleHorasVooAnexo.abrir('{!JSENCODE(abastecimentoAtual.Id)}', '{!JSENCODE(abastecimentoAtual.Caminho_Anexo__c)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
+                                                        </apex:outputPanel>
                                                         <apex:inputTextarea value="{!abastecimentoAtual.Documento_Referencia__c}" 
                                                                             styleClass="form-control"
                                                                             style="resize: vertical; min-height: 70px;"
@@ -2125,6 +2312,33 @@
                     </div>
                 </apex:outputPanel>
             </apex:form>
+
+            <!-- Visualizador da nota anexada no PlaneIT.
+                 Fica fora do apex:form e dos painéis rerenderizados para não
+                 ser recriado a cada ação da página. -->
+            <div id="anexoVisualizador" class="anexo-visualizador" hidden="hidden">
+                <div class="anexo-visualizador-fundo" onclick="ControleHorasVooAnexo.fechar();"></div>
+                <div class="anexo-visualizador-caixa" role="dialog" aria-modal="true" aria-label="Nota anexada">
+                    <header class="anexo-visualizador-topo">
+                        <span id="anexoVisualizadorTitulo" class="anexo-visualizador-titulo"></span>
+                        <div class="anexo-visualizador-acoes">
+                            <a id="anexoVisualizadorNovaAba" class="anexo-visualizador-botao"
+                               href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
+                            <a id="anexoVisualizadorBaixar" class="anexo-visualizador-botao anexo-visualizador-botao-primario"
+                               href="#">Baixar</a>
+                            <button type="button" class="anexo-visualizador-fechar"
+                                    aria-label="Fechar" onclick="ControleHorasVooAnexo.fechar();">&#215;</button>
+                        </div>
+                    </header>
+                    <div class="anexo-visualizador-corpo">
+                        <div id="anexoVisualizadorCarregando" class="anexo-visualizador-carregando">
+                            <div class="anexo-visualizador-spinner"></div>
+                            Carregando nota...
+                        </div>
+                        <img id="anexoVisualizadorImagem" class="anexo-visualizador-imagem" alt="Nota anexada" hidden="hidden"/>
+                    </div>
+                </div>
+            </div>
         </apex:define>
     </apex:composition>
 </apex:page>
