@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Escritorio_de_Vinculo_Trabalho__c</fullName>
+    <label>Escritório de Vínculo de Trabalho</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MultiselectPicklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Assis/SP</fullName>
+                <default>false</default>
+                <label>Assis/SP</label>
+            </value>
+            <value>
+                <fullName>São Paulo/SP</fullName>
+                <default>false</default>
+                <label>São Paulo/SP</label>
+            </value>
+            <value>
+                <fullName>Curitiba/PR</fullName>
+                <default>false</default>
+                <label>Curitiba/PR</label>
+            </value>
+            <value>
+                <fullName>Belo Horizonte/MG</fullName>
+                <default>false</default>
+                <label>Belo Horizonte/MG</label>
+            </value>
+            <value>
+                <fullName>Lins/SP</fullName>
+                <default>false</default>
+                <label>Lins/SP</label>
+            </value>
+            <value>
+                <fullName>Tupã/SP</fullName>
+                <default>false</default>
+                <label>Tupã/SP</label>
+            </value>
+            <value>
+                <fullName>Brasília/DF</fullName>
+                <default>false</default>
+                <label>Brasília/DF</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+    <visibleLines>7</visibleLines>
+</CustomField>

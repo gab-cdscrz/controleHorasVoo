@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Nivel_de_Formacao__c</fullName>
+    <label>Nível de Formação</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Ensino fundamental incompleto</fullName>
+                <default>false</default>
+                <label>Ensino Fundamental Incompleto</label>
+            </value>
+            <value>
+                <fullName>Ensino fundamental completo</fullName>
+                <default>false</default>
+                <label>Ensino Fundamental Completo</label>
+            </value>
+            <value>
+                <fullName>Ensino médio incompleto</fullName>
+                <default>false</default>
+                <label>Ensino Médio Incompleto</label>
+            </value>
+            <value>
+                <fullName>Ensino médio completo</fullName>
+                <default>false</default>
+                <label>Ensino Médio Completo</label>
+            </value>
+            <value>
+                <fullName>Ensino técnico incompleto</fullName>
+                <default>false</default>
+                <label>Ensino Técnico Incompleto</label>
+            </value>
+            <value>
+                <fullName>Ensino técnico completo</fullName>
+                <default>false</default>
+                <label>Ensino Técnico Completo</label>
+            </value>
+            <value>
+                <fullName>Superior incompleto</fullName>
+                <default>false</default>
+                <label>Superior Incompleto</label>
+            </value>
+            <value>
+                <fullName>Superior completo</fullName>
+                <default>false</default>
+                <label>Superior Completo</label>
+            </value>
+            <value>
+                <fullName>Pós-graduação incompleto</fullName>
+                <default>false</default>
+                <label>Pós-Graduação Incompleto</label>
+            </value>
+            <value>
+                <fullName>Pós-graduação completo</fullName>
+                <default>false</default>
+                <label>Pós-Graduação Completo</label>
+            </value>
+            <value>
+                <fullName>Mestrado incompleto</fullName>
+                <default>false</default>
+                <label>Mestrado Incompleto</label>
+            </value>
+            <value>
+                <fullName>Mestrado completo</fullName>
+                <default>false</default>
+                <label>Mestrado Completo</label>
+            </value>
+            <value>
+                <fullName>Doutorado incompleto</fullName>
+                <default>false</default>
+                <label>Doutorado Incompleto</label>
+            </value>
+            <value>
+                <fullName>Doutorado completo</fullName>
+                <default>false</default>
+                <label>Doutorado Completo</label>
+            </value>
+            <value>
+                <fullName>Pós-Doutorado incompleto</fullName>
+                <default>false</default>
+                <label>Pós-Doutorado Incompleto</label>
+            </value>
+            <value>
+                <fullName>Pós-Doutorado completo</fullName>
+                <default>false</default>
+                <label>Pós-Doutorado Completo</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

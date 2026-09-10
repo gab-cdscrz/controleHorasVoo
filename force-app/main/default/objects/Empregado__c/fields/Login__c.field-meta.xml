@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Login__c</fullName>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <description>Relacionamento ao objeto Login que armazena as restrições de acesso</description>
+    <label>Login Extranet</label>
+    <referenceTo>Login__c</referenceTo>
+    <relationshipName>Empregados</relationshipName>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

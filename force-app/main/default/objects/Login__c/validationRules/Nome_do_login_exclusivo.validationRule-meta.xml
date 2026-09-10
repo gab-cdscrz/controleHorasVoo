@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Nome_do_login_exclusivo</fullName>
+    <active>true</active>
+    <description>verifica se já existe um login com esse nome</description>
+    <errorConditionFormula>AND(
+VLOOKUP($ObjectType.Login__c.Fields.Name, $ObjectType.Login__c.Fields.Name, Name) == Name,
+VLOOKUP($ObjectType.Login__c.Fields.Id, $ObjectType.Login__c.Fields.Name, Name) !=  Id 
+)</errorConditionFormula>
+    <errorDisplayField>Name</errorDisplayField>
+    <errorMessage>Já existe um login com esse nome!</errorMessage>
+</ValidationRule>

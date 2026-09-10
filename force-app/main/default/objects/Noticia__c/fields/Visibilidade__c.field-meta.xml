@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Visibilidade__c</fullName>
+    <inlineHelpText>Essa notícia será visível por quem?</inlineHelpText>
+    <label>Visibilidade</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Funcionários</fullName>
+                <default>true</default>
+                <label>Funcionários</label>
+            </value>
+            <value>
+                <fullName>Clientes</fullName>
+                <default>false</default>
+                <label>Clientes</label>
+            </value>
+            <value>
+                <fullName>Todos</fullName>
+                <default>false</default>
+                <label>Todos</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

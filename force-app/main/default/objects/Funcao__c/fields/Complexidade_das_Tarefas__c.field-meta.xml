@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Complexidade_das_Tarefas__c</fullName>
+    <label>Complexidade das Tarefas</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Tarefas Simples e Rotineiras</fullName>
+                <default>false</default>
+                <label>Tarefas Simples e Rotineiras</label>
+            </value>
+            <value>
+                <fullName>Tarefas Padronizadas</fullName>
+                <default>false</default>
+                <label>Tarefas Padronizadas</label>
+            </value>
+            <value>
+                <fullName>Tarefas Ligeiramente Variadas</fullName>
+                <default>false</default>
+                <label>Tarefas Ligeiramente Variadas</label>
+            </value>
+            <value>
+                <fullName>Tarefas Variadas e de Média Complexidade</fullName>
+                <default>false</default>
+                <label>Tarefas Variadas e de Média Complexidade</label>
+            </value>
+            <value>
+                <fullName>Tarefas Variadas e Complexas</fullName>
+                <default>false</default>
+                <label>Tarefas Variadas e Complexas</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

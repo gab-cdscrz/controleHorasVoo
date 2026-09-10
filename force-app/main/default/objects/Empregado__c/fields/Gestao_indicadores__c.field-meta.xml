@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Gestao_indicadores__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Alterar informações a respeito dos KPI dos indicadores</description>
+    <label>Gestão de Indicadores</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

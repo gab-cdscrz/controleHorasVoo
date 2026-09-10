@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Total_horas_produtivas_semanal__c</fullName>
+    <description>Somente as horas dos funcionarios que apontam</description>
+    <label>Total de horas produtivas (semanal)</label>
+    <summarizedField>Empregado__c.Qtde_horas_semanais__c</summarizedField>
+    <summaryFilterItems>
+        <field>Empregado__c.isActive__c</field>
+        <operation>equals</operation>
+        <value>True</value>
+    </summaryFilterItems>
+    <summaryFilterItems>
+        <field>Empregado__c.Realiza_apontamentos__c</field>
+        <operation>equals</operation>
+        <value>True</value>
+    </summaryFilterItems>
+    <summaryForeignKey>Empregado__c.Funcao__c</summaryForeignKey>
+    <summaryOperation>sum</summaryOperation>
+    <trackTrending>false</trackTrending>
+    <type>Summary</type>
+</CustomField>

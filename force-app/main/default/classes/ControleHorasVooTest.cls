@@ -416,7 +416,11 @@ public class ControleHorasVooTest {
         
         // Verificar que as horas foram subtraídas da aeronave
         Aeronave__c aeronaveAtualizada = [SELECT Horas_Totais_de_Voo__c FROM Aeronave__c WHERE Id = :aeronave.Id];
-        System.assertEquals(97.5, aeronaveAtualizada.Horas_Totais_de_Voo__c, 'Horas deveriam ter sido subtraídas');
+        System.assertEquals(
+            0,
+            aeronaveAtualizada.Horas_Totais_de_Voo__c,
+            'O total deve ser recalculado a partir dos voos restantes'
+        );
     }
     
     // Teste de exclusão sem ID (caminho de erro)
@@ -519,6 +523,8 @@ public class ControleHorasVooTest {
         System.assertEquals('#ff9800', ControleHorasVooController.obterCorTipo('AB')); // Abastecimento
         System.assertEquals('#6c757d', ControleHorasVooController.obterCorTipo('XX')); // Outro
         System.assertEquals('#6c757d', ControleHorasVooController.obterCorTipo(null)); // Nulo
+        Assert.areEqual('Translado', ControleHorasVooController.obterNomeTipo('TR'));
+        Assert.areEqual('Tentativa', ControleHorasVooController.obterNomeTipo('TT'));
     }
     
     // Teste de camposHabilitados, camposEditaveis e outras propriedades
@@ -601,7 +607,36 @@ public class ControleHorasVooTest {
     @isTest
     public static void testCalendarioSemAeronave(){
         empregado__c empregadoPiloto = TestDataStatic.empregadoPiloto;
+        Aeronave__c aeronave = TestDataStatic.aeronaveteste;
         setSession(empregadoPiloto.login__c);
+
+        Date referenceDate = baseDate();
+        insert new List<Controle_Horas_Voo__c>{
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aeronave.Id,
+                Data_do_Voo__c = referenceDate,
+                Piloto__c = empregadoPiloto.Id,
+                Tipo__c = 'TR',
+                Horas_Voo__c = 1.5,
+                TOT__c = 1.5
+            ),
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aeronave.Id,
+                Data_do_Voo__c = referenceDate,
+                Piloto__c = empregadoPiloto.Id,
+                Tipo__c = 'TT',
+                Horas_Voo__c = 0.5,
+                TOT__c = 0.5
+            ),
+            new Controle_Horas_Voo__c(
+                Aeronave__c = aeronave.Id,
+                Data_do_Voo__c = referenceDate,
+                Piloto__c = empregadoPiloto.Id,
+                Tipo__c = 'AB',
+                Horas_Voo__c = 0,
+                TOT__c = 0
+            )
+        };
         
         ControleHorasVooController controller = new ControleHorasVooController();
         controller.abaAtiva = 'calendario';
@@ -611,6 +646,52 @@ public class ControleHorasVooTest {
         controller.aplicarFiltrosCalendario();
         
         System.assertEquals(0, controller.diasCalendario.size());
+        Assert.isTrue(
+            controller.temDashboardAeronaves,
+            'The initial calendar should display the fleet dashboard.'
+        );
+        Assert.areEqual(
+            2,
+            controller.totalVoosDashboard,
+            'Refueling-only entries must not be counted as flights.'
+        );
+        Assert.areEqual(
+            Decimal.valueOf('2.0'),
+            controller.totalHorasDashboard,
+            'The dashboard should aggregate flight hours for the selected month.'
+        );
+    }
+
+    @isTest
+    static void dashboardOpensSelectedAircraftCalendar() {
+        empregado__c pilot = TestDataStatic.empregadoPiloto;
+        Aeronave__c aircraft = TestDataStatic.aeronaveteste;
+        setSession(pilot.login__c);
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String, String>{
+                'aeronaveDashboardId' => String.valueOf(aircraft.Id)
+            }
+        );
+
+        Test.startTest();
+        controller.abrirCalendarioDashboard();
+        Test.stopTest();
+
+        Assert.areEqual(
+            String.valueOf(aircraft.Id),
+            controller.filtroAeronaveIdCalendario,
+            'Selecting a dashboard item should update the aircraft filter.'
+        );
+        Assert.areEqual(
+            42,
+            controller.diasCalendario.size(),
+            'Selecting an aircraft should open its monthly calendar.'
+        );
+        Assert.isTrue(
+            controller.dashboardAeronaves.isEmpty(),
+            'The fleet dashboard should be released after opening a calendar.'
+        );
     }
     
     // Teste para DiaCalendario wrapper
@@ -768,14 +849,12 @@ public class ControleHorasVooTest {
         ControleHorasVooController controller = new ControleHorasVooController();
         controller.editarControle();
 
-        // 3. Simular edição do abastecimento (via lista abastecimentosEdicao + backup de IDs)
-        controller.abastecimentosEdicao = new List<Abastecimento__c>{
-            new Abastecimento__c(
-                Quantidade__c = 200,
-                Custo_Unitario__c = 15
-            )
-        };
-        controller.abastecimentoIdsBackup = new List<Id>{ ab.Id };
+        // 3. Editar o registro carregado pela consulta usada pela página.
+        // Isso protege os campos adicionais que o serviço lê antes de persistir.
+        System.assertEquals(1, controller.abastecimentosEdicao.size(),
+            'O abastecimento existente deve ser carregado para edição');
+        controller.abastecimentosEdicao[0].Quantidade__c = 200;
+        controller.abastecimentosEdicao[0].Custo_Unitario__c = 15;
 
         Test.startTest();
         controller.salvarControleHoras();
@@ -783,7 +862,7 @@ public class ControleHorasVooTest {
 
         // 4. Verificar flag no abastecimento
         Abastecimento__c abAtualizado = [
-            SELECT Editado_Manualmente__c, Quantidade__c
+            SELECT Editado_Manualmente__c, Quantidade__c, Custo_Unitario__c, Custo_Total__c
             FROM Abastecimento__c
             WHERE Id = :ab.Id
         ];
@@ -791,5 +870,232 @@ public class ControleHorasVooTest {
             'Edição manual do abastecimento deve setar Editado_Manualmente__c = true');
         System.assertEquals(200, abAtualizado.Quantidade__c,
             'Quantidade corrigida pelo usuário deve ter sido salva');
+        System.assertEquals(15, abAtualizado.Custo_Unitario__c,
+            'Preço do AVGAS corrigido pelo usuário deve ter sido salvo');
+        System.assertEquals(3000, abAtualizado.Custo_Total__c,
+            'Custo total deve ser recalculado com o preço atualizado');
+    }
+
+    // =============================================================================
+    // TESTES: ABA DE CADASTRO DE AERONAVES (FROTA PRÓPRIA/LOCADA)
+    // =============================================================================
+
+    @isTest
+    public static void testNovaAeronaveDefaultLocada(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        System.assertEquals('Locada', controller.aeronaveForm.Tipo_Frota__c,
+            'Nova aeronave deve vir com default Frota Locada, caso de uso principal desta aba');
+        System.assertEquals(true, controller.modoEdicaoAeronave);
+        System.assertEquals(null, controller.aeronaveFormOriginalId);
+    }
+
+    @isTest
+    public static void testCadastrarAeronaveLocadaNuncaTemIdPlaneit(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        controller.aeronaveForm.Name = 'PT-TESTE-LOCADA';
+        controller.aeronaveForm.Modelo__c = 'C-206';
+        controller.aeronaveForm.Empresa_Locadora__c = 'Locadora XPTO';
+        controller.aeronaveForm.Id_Planeit__c = 999; // tentativa de forçar valor pela UI
+
+        Test.startTest();
+        controller.salvarAeronave();
+        Test.stopTest();
+
+        Aeronave__c criada = [
+            SELECT Id, Tipo_Frota__c, Empresa_Locadora__c, Id_Planeit__c, Ativo__c
+            FROM Aeronave__c
+            WHERE Name = 'PT-TESTE-LOCADA'
+            LIMIT 1
+        ];
+        System.assertEquals('Locada', criada.Tipo_Frota__c);
+        System.assertEquals('Locadora XPTO', criada.Empresa_Locadora__c);
+        System.assertEquals(null, criada.Id_Planeit__c,
+            'Id_Planeit__c nunca deve ser gravado a partir do formulário — protege da sincronização automática do Planeit');
+        System.assertEquals(true, criada.Ativo__c);
+        System.assertEquals(false, controller.modoEdicaoAeronave, 'Formulário deve fechar após salvar');
+    }
+
+    @isTest
+    public static void testSalvarAeronaveSemNomeAdicionaErro(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        controller.aeronaveForm.Name = null;
+
+        Test.startTest();
+        controller.salvarAeronave();
+        Test.stopTest();
+
+        System.assertEquals(true, ApexPages.hasMessages(ApexPages.Severity.ERROR),
+            'Deve exibir erro de validação quando Matrícula estiver em branco');
+        System.assertEquals(0, [SELECT COUNT() FROM Aeronave__c WHERE Modelo__c = null AND Name = null]);
+    }
+
+    @isTest
+    public static void testEditarAeronaveExistente(){
+        Aeronave__c existente = new Aeronave__c(
+            Name = 'PT-TESTE-EDICAO',
+            Tipo_Frota__c = 'Propria',
+            Ativo__c = true
+        );
+        insert existente;
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String,String>{ 'aeronaveId' => String.valueOf(existente.Id) }
+        );
+        controller.editarAeronave();
+        System.assertEquals(true, controller.modoEdicaoAeronave);
+        System.assertEquals(existente.Id, controller.aeronaveFormOriginalId,
+            'Padrão idBackup: Id original deve ficar guardado, não no sObject do form');
+        System.assertEquals(null, controller.aeronaveForm.Id);
+
+        controller.aeronaveForm.Modelo__c = 'C-206H';
+
+        Test.startTest();
+        controller.salvarAeronave();
+        Test.stopTest();
+
+        Aeronave__c atualizada = [SELECT Id, Modelo__c FROM Aeronave__c WHERE Id = :existente.Id];
+        System.assertEquals('C-206H', atualizada.Modelo__c);
+        System.assertEquals(1, [SELECT COUNT() FROM Aeronave__c WHERE Name = 'PT-TESTE-EDICAO'],
+            'Edição deve fazer UPDATE, nunca criar um segundo registro');
+    }
+
+    @isTest
+    public static void testAlternarAtivoAeronave(){
+        Aeronave__c existente = new Aeronave__c(
+            Name = 'PT-TESTE-TOGGLE',
+            Tipo_Frota__c = 'Locada',
+            Ativo__c = true
+        );
+        insert existente;
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String,String>{ 'aeronaveId' => String.valueOf(existente.Id) }
+        );
+
+        Test.startTest();
+        controller.alternarAtivoAeronave();
+        Test.stopTest();
+
+        Aeronave__c desativada = [SELECT Ativo__c FROM Aeronave__c WHERE Id = :existente.Id];
+        System.assertEquals(false, desativada.Ativo__c, 'Deveria estar inativa após alternar');
+    }
+
+    @isTest
+    public static void testFiltrosListaAeronaves(){
+        insert new List<Aeronave__c>{
+            new Aeronave__c(Name = 'PT-PROPRIA-ATIVA', Tipo_Frota__c = 'Propria', Ativo__c = true),
+            new Aeronave__c(Name = 'PT-LOCADA-ATIVA', Tipo_Frota__c = 'Locada', Ativo__c = true),
+            new Aeronave__c(Name = 'PT-LOCADA-INATIVA', Tipo_Frota__c = 'Locada', Ativo__c = false)
+        };
+
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.filtroTipoFrotaAeronaves = 'Locada';
+        controller.filtroStatusAeronaves = 'ativas';
+
+        Test.startTest();
+        controller.aplicarFiltrosAeronaves();
+        Test.stopTest();
+
+        System.assertEquals(1, controller.listaAeronaves.size());
+        System.assertEquals('PT-LOCADA-ATIVA', controller.listaAeronaves[0].Name);
+    }
+
+    @isTest
+    public static void testCancelarEdicaoAeronave(){
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        controller.aeronaveForm.Name = 'RASCUNHO';
+
+        controller.cancelarEdicaoAeronave();
+
+        System.assertEquals(false, controller.modoEdicaoAeronave);
+        System.assertEquals(null, controller.aeronaveFormOriginalId);
+        System.assertEquals(null, controller.aeronaveForm.Name);
+    }
+
+    @isTest
+    public static void testTrocarAbaAeronavesCarregaLista(){
+        insert new Aeronave__c(Name = 'PT-TROCA-ABA', Tipo_Frota__c = 'Propria', Ativo__c = true);
+
+        ControleHorasVooController controller = newControllerWithPage(
+            new Map<String,String>{ 'aba' => 'aeronaves' }
+        );
+
+        Test.startTest();
+        controller.trocarAba();
+        Test.stopTest();
+
+        System.assertEquals('aeronaves', controller.abaAtiva);
+        System.assertNotEquals(null, controller.listaAeronaves);
+        System.assert(controller.listaAeronaves.size() > 0);
+    }
+
+    @isTest
+    public static void testViewModelInspecaoETitulosAeronave() {
+        ControleHorasVooController controller = new ControleHorasVooController();
+        controller.novaAeronave();
+        System.assert(String.isNotBlank(controller.tituloFormularioAeronave));
+
+        Aeronave__c aeronave = TestDataStatic.aeronaveteste;
+        controller.aeronaveFormOriginalId = aeronave.Id;
+        controller.aeronaveForm.Name = aeronave.Name;
+        System.assert(controller.tituloFormularioAeronave.contains(aeronave.Name));
+
+        Inspecao_Aeronave__c inspecao = new Inspecao_Aeronave__c(
+            Ativa__c = true,
+            Horas_Proxima__c = 110,
+            Data_Proxima__c = Date.today().addDays(20)
+        );
+        ControleHorasVooController.InspecaoViewModel viewModel =
+            new ControleHorasVooController.InspecaoViewModel(inspecao, 100);
+
+        System.assertEquals(inspecao, viewModel.registro);
+        System.assert(String.isNotBlank(viewModel.status));
+        System.assert(String.isNotBlank(viewModel.nivelStatus));
+        System.assertEquals(10, viewModel.horasRestantes);
+        System.assertEquals(20, viewModel.diasRestantes);
+    }
+
+    @isTest
+    public static void testCalendarioExibeProximasInspecoes() {
+        Id aeronaveId = TestDataStatic.aeronaveteste.Id;
+        Aeronave__c aeronave = [
+            SELECT Id, Horas_Totais_de_Voo__c
+            FROM Aeronave__c
+            WHERE Id = :aeronaveId
+        ];
+        insert new Inspecao_Aeronave__c(
+            Aeronave__c = aeronave.Id,
+            Chave_Unica__c = 'TESTE_CALENDARIO_100H',
+            Id_Inspecao_Planeit__c = 'TESTE-100',
+            Id_Aeronave_Planeit__c = 'TESTE-AERONAVE',
+            Nome_Inspecao__c = '100hrs',
+            Horas_Proxima__c = (aeronave.Horas_Totais_de_Voo__c ?? 0) + 10,
+            Ativa__c = true
+        );
+
+        ControleHorasVooController controller =
+            newControllerWithPage(new Map<String, String>());
+        controller.filtroAeronaveIdCalendario = aeronave.Id;
+        controller.filtroAnoCalendario = String.valueOf(Date.today().year());
+        controller.filtroMesCalendario = String.valueOf(Date.today().month());
+
+        Test.startTest();
+        controller.aplicarFiltrosCalendario();
+        Test.stopTest();
+
+        System.assertEquals(
+            1,
+            controller.inspecoesProximasCalendario.size(),
+            'A inspeção ativa deve ser exibida no resumo do calendário.'
+        );
+        System.assertEquals(
+            true,
+            controller.inspecoesProximasCalendario[0].registro.Ativa__c,
+            'A consulta deve carregar os campos usados pela calculadora de status.'
+        );
     }
 }

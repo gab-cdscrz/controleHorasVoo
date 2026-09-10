@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CNAE_Principal__c</fullName>
+    <description>CNAE principal com código e descrição</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Inserir o CNAE principal no formato com código e descrição, Ex. &quot;5819100 - Edição de cadastros, listas e de outros produtos gráficos&quot;</inlineHelpText>
+    <label>CNAE Principal</label>
+    <length>200</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Validacao_de_CNPJ</fullName>
+    <active>true</active>
+    <errorConditionFormula>IF(LEN(CNPJ__c)=14,OR(AND(MOD((
+(VALUE(MID(CNPJ__c,1,1))*6)+
+(VALUE(MID(CNPJ__c,2,1))*5)+
+(VALUE(MID(CNPJ__c,3,1))*4)+
+(VALUE(MID(CNPJ__c,4,1))*3)+
+(VALUE(MID(CNPJ__c,5,1))*2)+
+(VALUE(MID(CNPJ__c,6,1))*9)+
+(VALUE(MID(CNPJ__c,7,1))*8)+
+(VALUE(MID(CNPJ__c,8,1))*7)+
+(VALUE(MID(CNPJ__c,9,1))*6)+
+(VALUE(MID(CNPJ__c,10,1))*5)+
+(VALUE(MID(CNPJ__c,11,1))*4)+
+(VALUE(MID(CNPJ__c,12,1))*3)+
+(VALUE(MID(CNPJ__c,13,1))*2))
+,11)&lt;=1
+,VALUE(MID(CNPJ__c,14,1))!=0)
+,AND(MOD((
+(VALUE(MID(CNPJ__c,1,1))*6)+
+(VALUE(MID(CNPJ__c,2,1))*5)+
+(VALUE(MID(CNPJ__c,3,1))*4)+
+(VALUE(MID(CNPJ__c,4,1))*3)+
+(VALUE(MID(CNPJ__c,5,1))*2)+
+(VALUE(MID(CNPJ__c,6,1))*9)+
+(VALUE(MID(CNPJ__c,7,1))*8)+
+(VALUE(MID(CNPJ__c,8,1))*7)+
+(VALUE(MID(CNPJ__c,9,1))*6)+
+(VALUE(MID(CNPJ__c,10,1))*5)+
+(VALUE(MID(CNPJ__c,11,1))*4)+
+(VALUE(MID(CNPJ__c,12,1))*3)+
+(VALUE(MID(CNPJ__c,13,1))*2))
+,11)&gt;1
+,(11-MOD((
+(VALUE(MID(CNPJ__c,1,1))*6)+
+(VALUE(MID(CNPJ__c,2,1))*5)+
+(VALUE(MID(CNPJ__c,3,1))*4)+
+(VALUE(MID(CNPJ__c,4,1))*3)+
+(VALUE(MID(CNPJ__c,5,1))*2)+
+(VALUE(MID(CNPJ__c,6,1))*9)+
+(VALUE(MID(CNPJ__c,7,1))*8)+
+(VALUE(MID(CNPJ__c,8,1))*7)+
+(VALUE(MID(CNPJ__c,9,1))*6)+
+(VALUE(MID(CNPJ__c,10,1))*5)+
+(VALUE(MID(CNPJ__c,11,1))*4)+
+(VALUE(MID(CNPJ__c,12,1))*3)+
+(VALUE(MID(CNPJ__c,13,1))*2)
+),11
+))!=VALUE(MID(CNPJ__c,14,1)))),false)</errorConditionFormula>
+    <errorDisplayField>CNPJ__c</errorDisplayField>
+    <errorMessage>O Número do CNPJ é Inválido</errorMessage>
+</ValidationRule>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Responsavel_Por__c</fullName>
+    <label>Responsável Por</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Equipamentos</fullName>
+                <default>false</default>
+                <label>Equipamentos</label>
+            </value>
+            <value>
+                <fullName>Serviços</fullName>
+                <default>false</default>
+                <label>Serviços</label>
+            </value>
+            <value>
+                <fullName>Bens Patrimoniais</fullName>
+                <default>false</default>
+                <label>Bens Patrimoniais</label>
+            </value>
+            <value>
+                <fullName>Dinheiro</fullName>
+                <default>false</default>
+                <label>Dinheiro</label>
+            </value>
+            <value>
+                <fullName>Dados Sigilosos</fullName>
+                <default>false</default>
+                <label>Dados Sigilosos</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

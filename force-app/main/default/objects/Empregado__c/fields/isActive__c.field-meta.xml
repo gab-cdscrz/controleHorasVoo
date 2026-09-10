@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>isActive__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>Especifica se o registro esta ativo ou não</description>
+    <inlineHelpText>Caso queira que o registro esteja ativo, marque esta opção</inlineHelpText>
+    <label>Ativada</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

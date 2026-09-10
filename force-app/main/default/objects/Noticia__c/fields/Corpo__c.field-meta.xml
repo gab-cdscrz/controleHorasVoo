@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Corpo__c</fullName>
+    <inlineHelpText>Corpo do texto da notícia, mostrada no Extranet ao clicar em uma notícia</inlineHelpText>
+    <label>Corpo</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>Html</type>
+    <visibleLines>20</visibleLines>
+</CustomField>

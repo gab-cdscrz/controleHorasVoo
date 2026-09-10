@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Hora_Ultima_Revisao__c</fullName>
+    <description>Informar hora da ultima revisão da aeronave. Ex: 50, 100, 1000, 1800.</description>
+    <externalId>false</externalId>
+    <label>Hora Ultima Revisao</label>
+    <precision>12</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

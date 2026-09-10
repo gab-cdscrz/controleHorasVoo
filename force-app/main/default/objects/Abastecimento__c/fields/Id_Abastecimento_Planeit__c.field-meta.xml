@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Id_Abastecimento_Planeit__c</fullName>
+    <description>ID do abastecimento no sistema Planeit. Usado como chave de upsert na sincronização.</description>
+    <externalId>false</externalId>
+    <label>ID Abastecimento Planeit</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

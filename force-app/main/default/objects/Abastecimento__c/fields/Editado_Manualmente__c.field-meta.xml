@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Editado_Manualmente__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Indica que este abastecimento foi editado manualmente pelo usuário. Registros com este flag ativo não serão sobrescritos nem deletados pela sincronização automática com o Planeit.</description>
+    <label>Editado Manualmente</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>
