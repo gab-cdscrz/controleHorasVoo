@@ -38,14 +38,14 @@
                             if (elemento.getAttribute('data-carregando') === '1') {
                                 return;
                             }
+                            // Alterna atributo em vez de trocar innerHTML, que
+                            // destruiria o SVG do ícone.
                             elemento.setAttribute('data-carregando', '1');
-                            elemento.innerHTML = '⏳';
                         }
 
                         var restaurar = function () {
                             if (elemento) {
                                 elemento.setAttribute('data-carregando', '0');
-                                elemento.innerHTML = '📎';
                             }
                         };
 
@@ -691,7 +691,7 @@
                                                                                                         <a href="javascript:void(0)"
                                                                                                            class="anexo-nota-link"
                                                                                                            title="Baixar a nota anexada no PlaneIT"
-                                                                                                           onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                                                           onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
                                                                                                     </apex:outputPanel>
                                                                                                     <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Observacoes__c))}" layout="block">
                                                                                                         <span class="abast-fornecedor">
@@ -1307,7 +1307,7 @@
                                                                     <a href="javascript:void(0)"
                                                                        class="anexo-nota-link"
                                                                        title="Baixar a nota anexada no PlaneIT"
-                                                                       onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                       onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
                                                                 </apex:outputPanel>
                                                                 <apex:inputTextarea value="{!ab.Documento_Referencia__c}" 
                                                                                     styleClass="form-control"
@@ -1382,7 +1382,7 @@
                                                                     <a href="javascript:void(0)"
                                                                        class="anexo-nota-link"
                                                                        title="Baixar a nota anexada no PlaneIT"
-                                                                       onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                       onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
                                                                 </apex:outputPanel>
                                                                 <apex:outputText value="{!IF(ab.Documento_Referencia__c != null, ab.Documento_Referencia__c, '-- Não informado --')}"
                                                                                  styleClass="form-control readonly-field"
@@ -1498,7 +1498,7 @@
                                                             <a href="javascript:void(0)"
                                                                class="anexo-nota-link"
                                                                title="Baixar a nota anexada no PlaneIT"
-                                                               onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(abastecimentoAtual.Id)}', this);">📎</a>
+                                                               onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(abastecimentoAtual.Id)}', this);"><svg class="anexo-nota-icone" viewBox="0 0 520 520" aria-hidden="true" focusable="false"><path d="M176 367c6 6 15 5 21 0l100-100a20 20 0 0 1 28 0c9 8 8 22 0 30L202 418a70 70 0 0 1-99 0l-1-1a70 70 0 0 1 0-99l217-217a70 70 0 0 1 99 0l1 1a70 70 0 0 1 0 99l-1 1c-5 5-6 12-2 18a150 150 0 0 1 14 35c2 8 11 10 17 5l15-16a131 131 0 0 0 0-185h-2a131 131 0 0 0-185 0L58 275a131 131 0 0 0 0 185l2 2a130 130 0 0 0 184 0l124-123a81 81 0 1 0-117-113l-98 98c-6 6-6 16 0 22z"/></svg></a>
                                                         </apex:outputPanel>
                                                         <apex:inputTextarea value="{!abastecimentoAtual.Documento_Referencia__c}" 
                                                                             styleClass="form-control"
