@@ -1294,6 +1294,12 @@
                                                         <div class="form-row">
                                                             <div class="form-group half-width">
                                                                 <label class="form-label">Documento de Referência</label>
+                                                                <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
+                                                                    <a href="javascript:void(0)"
+                                                                       class="anexo-nota-link"
+                                                                       title="Baixar a nota anexada no PlaneIT"
+                                                                       onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                </apex:outputPanel>
                                                                 <apex:inputTextarea value="{!ab.Documento_Referencia__c}" 
                                                                                     styleClass="form-control"
                                                                                     style="resize: vertical; min-height: 70px;"
@@ -1363,6 +1369,12 @@
                                                         <div class="form-row">
                                                             <div class="form-group half-width">
                                                                 <label class="form-label">Documento de Referência</label>
+                                                                <apex:outputPanel rendered="{!NOT(ISBLANK(ab.Caminho_Anexo__c))}" layout="none">
+                                                                    <a href="javascript:void(0)"
+                                                                       class="anexo-nota-link"
+                                                                       title="Baixar a nota anexada no PlaneIT"
+                                                                       onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(ab.Id)}', this);">📎</a>
+                                                                </apex:outputPanel>
                                                                 <apex:outputText value="{!IF(ab.Documento_Referencia__c != null, ab.Documento_Referencia__c, '-- Não informado --')}"
                                                                                  styleClass="form-control readonly-field"
                                                                                  style="display: block; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; min-height: 70px;"/>
@@ -1473,6 +1485,12 @@
                                                 <div class="form-row">
                                                     <div class="form-group half-width">
                                                         <label class="form-label">Documento de Referência</label>
+                                                        <apex:outputPanel rendered="{!NOT(ISBLANK(abastecimentoAtual.Caminho_Anexo__c))}" layout="none">
+                                                            <a href="javascript:void(0)"
+                                                               class="anexo-nota-link"
+                                                               title="Baixar a nota anexada no PlaneIT"
+                                                               onclick="ControleHorasVooAnexo.baixar('{!JSENCODE(abastecimentoAtual.Id)}', this);">📎</a>
+                                                        </apex:outputPanel>
                                                         <apex:inputTextarea value="{!abastecimentoAtual.Documento_Referencia__c}" 
                                                                             styleClass="form-control"
                                                                             style="resize: vertical; min-height: 70px;"
