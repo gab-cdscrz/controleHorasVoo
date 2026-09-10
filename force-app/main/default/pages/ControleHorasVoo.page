@@ -9,6 +9,7 @@
     <apex:composition template="HomePage">
         <apex:define name="content_body">
             <script>
+                window.controleHorasVooAccessToken = '{!JSENCODE(relatorioAccessToken)}';
                 window.controleHorasVooReportLibraryUrl =
                     '{!JSENCODE($Resource.exceljs)}';
                 window.gerarRelatorioHorasVooRemoto = function (
@@ -50,6 +51,7 @@
 
                         Visualforce.remoting.Manager.invokeAction(
                             '{!$RemoteAction.ControleHorasVooController.obterUrlAnexo}',
+                            window.controleHorasVooAccessToken,
                             abastecimentoId,
                             function (url) {
                                 restaurar();

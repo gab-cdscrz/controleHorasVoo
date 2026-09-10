@@ -186,10 +186,13 @@ public without sharing class ControleHorasVooController {
      * @return URL de download, ou null se não houver anexo ou sessão válida
      */
     @RemoteAction
-    public static String obterUrlAnexo(Id abastecimentoId) {
+    public static String obterUrlAnexo(String accessToken, Id abastecimentoId) {
         try {
-            // Mesmo critério de sessão usado pelas demais ações da página.
-            if (String.isBlank((String) Session.getValue('idLogin')) || abastecimentoId == null) {
+            // A sessão do portal não existe em JavaScript Remoting
+            // (ApexPages.currentPage() é nulo), por isso a autenticação usa o
+            // mesmo token emitido no carregamento da página, como no relatório.
+            if (!ControleHorasVooReportController.isSessionTokenValid(accessToken) ||
+                abastecimentoId == null) {
                 return null;
             }
 

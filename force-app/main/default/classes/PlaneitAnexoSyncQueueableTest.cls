@@ -80,6 +80,21 @@ private class PlaneitAnexoSyncQueueableTest {
         return ab;
     }
 
+    /**
+     * Token de sessão da página, do mesmo tipo emitido no carregamento.
+     * O @RemoteAction autentica por ele porque JavaScript Remoting não
+     * enxerga a sessão do portal.
+     */
+    private static String tokenValido() {
+        Empregado__c piloto = TestDataStatic.empregadoPiloto;
+        Grupo__c grupo = TestDataStatic.grupoAerolevantamento;
+        insert new Grupo_Funcionarios__c(
+            Grupo__c = grupo.Id,
+            Empregado__c = piloto.Id
+        );
+        return ControleHorasVooReportController.issueAccessTokenForLogin(piloto.Login__c);
+    }
+
     private static Abastecimento__c recarregar(Id abId) {
         return [
             SELECT Id, Caminho_Anexo__c, Anexo_Verificado_Em__c
@@ -216,31 +231,29 @@ private class PlaneitAnexoSyncQueueableTest {
         Database.update(ab, true, AccessLevel.SYSTEM_MODE);
 
         Test.setMock(HttpCalloutMock.class, new AnexoMock(true));
-        Test.setCurrentPage(Page.ControleHorasVoo);
-        Session.add('idLogin', 'LOGIN_TESTE');
+        String token = tokenValido();
 
         Test.startTest();
-        String url = ControleHorasVooController.obterUrlAnexo(ab.Id);
+        String url = ControleHorasVooController.obterUrlAnexo(token, ab.Id);
         Test.stopTest();
 
-        System.assertNotEquals(null, url, 'Com sessão e anexo, deve devolver a URL de download');
+        System.assertNotEquals(null, url, 'Com token válido e anexo, deve devolver a URL de download');
         System.assert(url.contains('X-Amz-Signature'), 'A URL deve vir assinada');
     }
 
     @IsTest
-    static void remoteActionDeveNegarSemSessao() {
+    static void remoteActionDeveNegarTokenInvalido() {
         Abastecimento__c ab = criarAbastecimento(560);
         ab.Caminho_Anexo__c = CAMINHO;
         Database.update(ab, true, AccessLevel.SYSTEM_MODE);
 
         Test.setMock(HttpCalloutMock.class, new AnexoMock(true));
-        Test.setCurrentPage(Page.ControleHorasVoo);
 
         Test.startTest();
-        String url = ControleHorasVooController.obterUrlAnexo(ab.Id);
+        String url = ControleHorasVooController.obterUrlAnexo('token-invalido', ab.Id);
         Test.stopTest();
 
-        System.assertEquals(null, url, 'Sem sessão de portal não deve devolver URL de anexo');
+        System.assertEquals(null, url, 'Token inválido não deve devolver URL de anexo');
     }
 
     @IsTest
@@ -248,11 +261,10 @@ private class PlaneitAnexoSyncQueueableTest {
         Abastecimento__c ab = criarAbastecimento(561);
 
         Test.setMock(HttpCalloutMock.class, new AnexoMock(true));
-        Test.setCurrentPage(Page.ControleHorasVoo);
-        Session.add('idLogin', 'LOGIN_TESTE');
+        String token = tokenValido();
 
         Test.startTest();
-        String url = ControleHorasVooController.obterUrlAnexo(ab.Id);
+        String url = ControleHorasVooController.obterUrlAnexo(token, ab.Id);
         Test.stopTest();
 
         System.assertEquals(null, url, 'Sem caminho gravado não há anexo a baixar');
