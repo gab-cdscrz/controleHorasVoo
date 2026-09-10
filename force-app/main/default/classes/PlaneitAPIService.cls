@@ -31,11 +31,6 @@ public without sharing class PlaneitAPIService {
     private static final String ABASTECIMENTOS_ENDPOINT = '/aeronave/abastecimentos';
     private static final String INSPECOES_ENDPOINT = '/aeronave/inspecoes';
     private static final String TOTAIS_ENDPOINT = '/aeronave/totais';
-    private static final String ANEXOS_LISTAR_ENDPOINT = '/anexos/listar';
-    private static final String ANEXOS_URL_ENDPOINT = '/anexos/url';
-    // Parâmetros fixos dos endpoints de anexo para o contexto de abastecimento.
-    private static final String ANEXO_MODULE = 'Aeronave';
-    private static final String ANEXO_TIPO_REGISTRO = 'Abastecimento';
     private static final Integer TIMEOUT_SEGUNDOS = 120;
     private static final Integer MAX_CALLOUTS = 90; // Margem de segurança (limite: 100)
 
@@ -137,11 +132,6 @@ public without sharing class PlaneitAPIService {
         public Decimal custoTotal;
         public String codigoMoeda;
         public String documentoReferencia; // Vai para campo Notas
-        // A Planeit oferece dois campos para o numero da nota e o uso varia por
-        // fornecedor: uns preenchem documentoReferencia (texto livre), outros
-        // delivery_receipt_code (numero) com o fornecedor em observacoes.
-        public String delivery_receipt_code;
-        public String horaAbastecimento;
         public String observacoes;
     }
     
@@ -176,7 +166,6 @@ public without sharing class PlaneitAPIService {
         public String custoTotal;
         public String codigoMoeda;
         public String documentoReferencia;
-        public String delivery_receipt_code;
         public String observacoes;
     }
 
@@ -928,8 +917,6 @@ public without sharing class PlaneitAPIService {
         ab.Custo_Unitario__c      = abData.custoUnidade;
         ab.Custo_Total__c         = abData.custoTotal;
         ab.Documento_Referencia__c = abData.documentoReferencia;
-        ab.Numero_Recibo__c       = abData.delivery_receipt_code;
-        ab.Hora_Abastecimento__c  = converterStringParaTime(abData.horaAbastecimento);
         ab.Observacoes__c         = abData.observacoes;
         
         if (String.isNotBlank(abData.dataVoo)) {
@@ -974,8 +961,6 @@ public without sharing class PlaneitAPIService {
         ab.Custo_Unitario__c       = converterStringParaDecimal(avData.custoUnidade);
         ab.Custo_Total__c          = converterStringParaDecimal(avData.custoTotal);
         ab.Documento_Referencia__c = avData.documentoReferencia;
-        ab.Numero_Recibo__c        = avData.delivery_receipt_code;
-        ab.Hora_Abastecimento__c   = converterStringParaTime(avData.horaAbastecimento);
         ab.Observacoes__c          = avData.observacoes;
 
         if (String.isNotBlank(avData.dataAbastecimento)) {
@@ -1323,7 +1308,6 @@ public without sharing class PlaneitAPIService {
      * @param timeString String no formato "14:30:00"
      * @return Time object ou null se inválido
      */
-    @TestVisible
     private static Time converterStringParaTime(String timeString) {
         if (String.isBlank(timeString)) {
             return null;
@@ -1476,159 +1460,9 @@ public without sharing class PlaneitAPIService {
             
             System.debug(LoggingLevel.ERROR, 'Erro ao buscar totais: ' + res.getStatusCode() + ' - ' + res.getBody());
             return null;
-
+            
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR, 'Exceção ao buscar totais: ' + e.getMessage() + '\n' + e.getStackTraceString());
-            return null;
-        }
-    }
-
-    // =========================================================================
-    // ANEXOS (notas de abastecimento)
-    //
-    // O arquivo permanece no storage da Planeit. Guardamos apenas o caminho
-    // (Abastecimento__c.Caminho_Anexo__c); a URL de download é assinada e
-    // expira em 1 hora, por isso é gerada sob demanda, nunca persistida.
-    // =========================================================================
-
-    /**
-     * Dados de um anexo retornados por /anexos/listar.
-     */
-    public class AnexoData {
-        public Integer id;
-        public String diretorioArquivo;
-        public String nomeArquivo;
-        public String extensaoArquivo;
-    }
-
-    private class AnexosResponse {
-        public Integer codigo;
-        public String mensagem;
-        public List<AnexoData> data;
-    }
-
-    private class AnexoUrlData {
-        public String url;
-    }
-
-    private class AnexoUrlResponse {
-        public Integer codigo;
-        public String mensagem;
-        public AnexoUrlData data;
-    }
-
-    /**
-     * @description Converte a matrícula do Salesforce para o formato da API de anexos.
-     * A Planeit usa a matrícula sem hífen (PT-VGD -> PTVGD).
-     */
-    public static String normalizarMatricula(String matricula) {
-        return String.isBlank(matricula) ? null : matricula.replace('-', '').trim().toUpperCase();
-    }
-
-    private static String montarQueryStringAnexo(Integer idAbastecimento, String matricula) {
-        return '?module=' + ANEXO_MODULE +
-               '&tipoRegistro=' + ANEXO_TIPO_REGISTRO +
-               '&idRegistro=' + idAbastecimento +
-               '&matricula=' + EncodingUtil.urlEncode(matricula, 'UTF-8');
-    }
-
-    /**
-     * @description Retorna o caminho do anexo de um abastecimento, ou null se não houver.
-     * Custa um callout por abastecimento: a API não oferece consulta em lote.
-     * @param idAbastecimento Id do abastecimento no Planeit
-     * @param matricula Matrícula da aeronave (com ou sem hífen)
-     * @return diretorioArquivo do primeiro anexo, ou null
-     */
-    public static String buscarCaminhoAnexo(Integer idAbastecimento, String matricula) {
-        String matriculaApi = normalizarMatricula(matricula);
-        if (idAbastecimento == null || String.isBlank(matriculaApi)) {
-            return null;
-        }
-
-        try {
-            String token = obterToken();
-            if (String.isBlank(token)) {
-                return null;
-            }
-
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint(
-                NAMED_CREDENTIAL + ANEXOS_LISTAR_ENDPOINT +
-                montarQueryStringAnexo(idAbastecimento, matriculaApi)
-            );
-            req.setMethod('GET');
-            req.setHeader('Authorization', 'Bearer ' + token); // NOPMD - endpoint uses a Named Credential.
-            req.setHeader('Accept', 'application/json');
-            req.setTimeout(TIMEOUT_SEGUNDOS * 1000);
-
-            HttpResponse res = new Http().send(req);
-            if (res.getStatusCode() != 200) {
-                System.debug(LoggingLevel.WARN,
-                    'Falha ao listar anexos do abastecimento ' + idAbastecimento +
-                    ': HTTP ' + res.getStatusCode());
-                return null;
-            }
-
-            AnexosResponse anexosRes = (AnexosResponse) JSON.deserialize(res.getBody(), AnexosResponse.class);
-            if (anexosRes.data == null || anexosRes.data.isEmpty()) {
-                return null;
-            }
-
-            // A operação anexa no máximo um arquivo por abastecimento; se houver
-            // mais de um, o primeiro é o relevante (ordem da própria Planeit).
-            return anexosRes.data[0].diretorioArquivo;
-
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR,
-                'Exceção ao listar anexos do abastecimento ' + idAbastecimento + ': ' + e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * @description Gera a URL assinada de download do anexo. Válida por 1 hora,
-     * portanto deve ser usada imediatamente e nunca armazenada.
-     * @param idAbastecimento Id do abastecimento no Planeit
-     * @param matricula Matrícula da aeronave (com ou sem hífen)
-     * @param caminhoArquivo Valor de Abastecimento__c.Caminho_Anexo__c
-     * @return URL de download, ou null em caso de falha
-     */
-    public static String gerarUrlAnexo(Integer idAbastecimento, String matricula, String caminhoArquivo) {
-        String matriculaApi = normalizarMatricula(matricula);
-        if (idAbastecimento == null || String.isBlank(matriculaApi) || String.isBlank(caminhoArquivo)) {
-            return null;
-        }
-
-        try {
-            String token = obterToken();
-            if (String.isBlank(token)) {
-                return null;
-            }
-
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint(
-                NAMED_CREDENTIAL + ANEXOS_URL_ENDPOINT +
-                montarQueryStringAnexo(idAbastecimento, matriculaApi) +
-                '&diretorioArquivo=' + EncodingUtil.urlEncode(caminhoArquivo, 'UTF-8')
-            );
-            req.setMethod('GET');
-            req.setHeader('Authorization', 'Bearer ' + token); // NOPMD - endpoint uses a Named Credential.
-            req.setHeader('Accept', 'application/json');
-            req.setTimeout(TIMEOUT_SEGUNDOS * 1000);
-
-            HttpResponse res = new Http().send(req);
-            if (res.getStatusCode() != 200) {
-                System.debug(LoggingLevel.WARN,
-                    'Falha ao gerar URL do anexo ' + caminhoArquivo + ': HTTP ' + res.getStatusCode());
-                return null;
-            }
-
-            AnexoUrlResponse urlRes = (AnexoUrlResponse) JSON.deserialize(res.getBody(), AnexoUrlResponse.class);
-            return (urlRes.data == null) ? null : urlRes.data.url;
-
-        } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR,
-                'Exceção ao gerar URL do anexo ' + caminhoArquivo + ': ' + e.getMessage());
             return null;
         }
     }

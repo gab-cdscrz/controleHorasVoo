@@ -55,16 +55,6 @@ public without sharing class ControleHorasVooReportController {
         return encodedPayload + '.' + sign(encodedPayload);
     }
 
-    /**
-     * @description Valida um token de sessão da página de Controle de Horas.
-     * Exposto porque JavaScript Remoting não enxerga a sessão do portal
-     * (ApexPages.currentPage() é nulo nesse contexto), então todo @RemoteAction
-     * da página precisa autenticar pelo token emitido no carregamento.
-     */
-    public static Boolean isSessionTokenValid(String accessToken) {
-        return validateAccessToken(accessToken);
-    }
-
     @TestVisible
     private static Boolean validateAccessToken(String accessToken) {
         if (String.isBlank(accessToken)) {

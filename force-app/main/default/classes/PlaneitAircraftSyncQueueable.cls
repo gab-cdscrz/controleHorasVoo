@@ -116,14 +116,7 @@ public with sharing class PlaneitAircraftSyncQueueable implements Queueable, Dat
                     1
                 )
             );
-            return;
         }
-
-        // Fim da cadeia: descobre quais abastecimentos têm nota anexada.
-        // Vai aqui, e não num agendamento próprio, porque depende dos
-        // abastecimentos já sincronizados - com dois crons independentes, o de
-        // anexos poderia rodar antes e não encontrar nada.
-        System.enqueueJob(new PlaneitAnexoSyncQueueable());
     }
 
     private static SincronizarVoosResponse failure(
