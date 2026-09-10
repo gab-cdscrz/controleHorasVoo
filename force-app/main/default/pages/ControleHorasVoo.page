@@ -2322,9 +2322,9 @@
                     <header class="anexo-visualizador-topo">
                         <span id="anexoVisualizadorTitulo" class="anexo-visualizador-titulo"></span>
                         <div class="anexo-visualizador-acoes">
-                            <a id="anexoVisualizadorNovaAba" class="btn btn-secondary anexo-visualizador-botao"
+                            <a id="anexoVisualizadorNovaAba" class="anexo-visualizador-botao"
                                href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
-                            <a id="anexoVisualizadorBaixar" class="btn btn-primary anexo-visualizador-botao"
+                            <a id="anexoVisualizadorBaixar" class="anexo-visualizador-botao anexo-visualizador-botao-primario"
                                href="#">Baixar</a>
                             <button type="button" class="anexo-visualizador-fechar"
                                     aria-label="Fechar" onclick="ControleHorasVooAnexo.fechar();">&#215;</button>
@@ -2332,7 +2332,7 @@
                     </header>
                     <div class="anexo-visualizador-corpo">
                         <div id="anexoVisualizadorCarregando" class="anexo-visualizador-carregando">
-                            <div class="loading"></div>
+                            <div class="anexo-visualizador-spinner"></div>
                             Carregando nota...
                         </div>
                         <img id="anexoVisualizadorImagem" class="anexo-visualizador-imagem" alt="Nota anexada" hidden="hidden"/>

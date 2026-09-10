@@ -675,11 +675,46 @@
     gap: 8px;
     flex-shrink: 0;
     }
+    /* Estilo próprio: o visualizador vive fora de .controle-horas-container,
+       onde .btn e .loading estão escopadas, então não pode reusá-las. */
     .anexo-visualizador-botao {
     font-size: 11px;
     padding: 5px 10px;
     text-decoration: none;
     white-space: nowrap;
+    border: 1px solid #c9cdd3;
+    border-radius: 4px;
+    background: #fff;
+    color: #16325c;
+    line-height: 1.6;
+    cursor: pointer;
+    }
+    .anexo-visualizador-botao:hover {
+    background: #f0f3f7;
+    color: #16325c;
+    text-decoration: none;
+    }
+    .anexo-visualizador-botao-primario {
+    background: #0b5cab;
+    border-color: #0b5cab;
+    color: #fff;
+    }
+    .anexo-visualizador-botao-primario:hover {
+    background: #094a8c;
+    border-color: #094a8c;
+    color: #fff;
+    }
+    .anexo-visualizador-spinner {
+    width: 26px;
+    height: 26px;
+    margin: 0 auto 8px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: anexo-visualizador-girar 0.8s linear infinite;
+    }
+    @keyframes anexo-visualizador-girar {
+    to { transform: rotate(360deg); }
     }
     .anexo-visualizador-fechar {
     background: none;
