@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Escopo completo do dominio ControleHorasVoo (extranet Visualforce).
+    Cobre: pagina VF, controller/services/selectors, integracao Planeit,
+    inspecao de aeronaves, base do portal (HomePage/Menu/Session),
+    objetos custom, static resources e named credentials.
+
+    Retrieve:  sf project retrieve start -o devbase -x manifest/package-controle-horas-voo.xml
+    Deploy:    sf project deploy start   -o devbase -x manifest/package-controle-horas-voo.xml
+-->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <!-- Nucleo Controle de Horas de Voo -->
+        <members>ControleHorasVooController</members>
+        <members>ControleHorasVooService</members>
+        <members>ControleHorasVooSelector</members>
+        <members>ControleHorasVooAuditService</members>
+        <members>ControleHorasVooDashboardService</members>
+        <members>ControleHorasVooDashboardServiceTest</members>
+        <members>ControleHorasVooReportController</members>
+        <members>ControleHorasVooReportService</members>
+        <members>ControleHorasVooReportSelector</members>
+        <members>ControleHorasVooReportServiceTest</members>
+        <members>ControleHorasVooServiceTest</members>
+        <members>ControleHorasVooTest</members>
+        <!-- Integracao Planeit -->
+        <members>PlaneitAPIService</members>
+        <members>PlaneitAPIServiceTest</members>
+        <members>PlaneitAircraftSelector</members>
+        <members>PlaneitAircraftSyncQueueable</members>
+        <members>PlaneitDailySyncScheduler</members>
+        <members>PlaneitScheduledSyncTest</members>
+        <members>PlaneitSyncLogService</members>
+        <members>SincronizarVoosResponse</members>
+        <members>SincronizarVoosResponseTest</members>
+        <!-- Inspecao de aeronaves -->
+        <members>InspecaoAeronaveService</members>
+        <members>InspecaoAeronaveServiceTest</members>
+        <members>InspecaoStatusService</members>
+        <members>InspecaoStatusServiceTest</members>
+        <!-- Base do portal extranet -->
+        <members>HomeController</members>
+        <members>MenuController</members>
+        <members>Session</members>
+        <members>AccessControl</members>
+        <members>ContratacaoAccessService</members>
+        <members>JwtAuthProvider</members>
+        <members>JwtBearerProvider</members>
+        <members>Util</members>
+        <!-- Apoio de teste -->
+        <members>TestDataStatic</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>ControleHorasVoo</members>
+        <members>HomePage</members>
+        <name>ApexPage</name>
+    </types>
+    <types>
+        <members>EmpregadoTrigger</members>
+        <name>ApexTrigger</name>
+    </types>
+    <types>
+        <members>Controle_Horas_Voo__c</members>
+        <members>Aeronave__c</members>
+        <members>Abastecimento__c</members>
+        <members>Inspecao_Aeronave__c</members>
+        <members>Empregado__c</members>
+        <members>Funcao__c</members>
+        <members>Grupo__c</members>
+        <members>Grupo_Funcionarios__c</members>
+        <members>Login__c</members>
+        <members>Noticia__c</members>
+        <members>Planeit_Sync_Log__c</members>
+        <members>Controle_Horas_Voo_Config__mdt</members>
+        <members>Portal_engemap_config__mdt</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>Portal_engemap_config.portal_secret_key</members>
+        <members>Portal_engemap_config.portal_senha_padrao</members>
+        <name>CustomMetadata</name>
+    </types>
+    <types>
+        <members>ControleHorasVooAssets</members>
+        <members>ChartJs</members>
+        <members>ChartDataLabels</members>
+        <members>exceljs</members>
+        <members>Imagens</members>
+        <members>imagesPortalEngemap</members>
+        <members>cometd</members>
+        <!-- icones_svg_slds2 NAO entra aqui: 19 MB / 5121 arquivos, fora do git e
+             do .forceignore, mantido apenas na org. A pagina ControleHorasVoo
+             depende dele, entao ao provisionar uma org nova retire-o de uma org
+             que ja o tenha, rodando um retrieve de StaticResource:icones_svg_slds2
+             com as linhas dele comentadas no .forceignore.
+             Lista-lo neste manifest quebra o deploy com "named in package.xml,
+             but was not found in zipped directory". -->
+        <name>StaticResource</name>
+    </types>
+    <types>
+        <members>Planeit_API</members>
+        <members>Planeit_API_Login</members>
+        <name>NamedCredential</name>
+    </types>
+    <version>67.0</version>
+</Package>

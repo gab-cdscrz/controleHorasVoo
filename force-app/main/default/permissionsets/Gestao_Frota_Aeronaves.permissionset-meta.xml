@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Acesso de leitura/edição a campos criados via metadata (sem FLS automática em nenhum profile): tipo de frota em Aeronave__c e nome de piloto/operador externo em Controle_Horas_Voo__c.</description>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Aeronave__c.Empresa_Locadora__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Aeronave__c.Tipo_Frota__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Controle_Horas_Voo__c.Operador_Externo__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Controle_Horas_Voo__c.Piloto_Externo__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Gestão de Frota de Aeronaves</label>
+</PermissionSet>

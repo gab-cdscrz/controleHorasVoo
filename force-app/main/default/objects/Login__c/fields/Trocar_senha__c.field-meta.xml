@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Trocar_senha__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>Marque esta opção para obrigar a troca de senha no próximo login</description>
+    <inlineHelpText>Marque esta opção para obrigar a troca de senha no próximo login</inlineHelpText>
+    <label>Trocar senha no próximo login</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Salario_medio_com_encargos__c</fullName>
+    <description>Salário médio da função com encargos</description>
+    <formula>Salario_medio__c * 1.73</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>Salário médio da função com encargos</inlineHelpText>
+    <label>Salário médio (com encargos)</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Atividades_Prestao_Servico__c</fullName>
+    <description>descrição de todos atividades cadastradas na prefeitura para este CNPJ.</description>
+    <inlineHelpText>Inserir código e descrição de todos atividades cadastradas na prefeitura para este CNPJ.</inlineHelpText>
+    <label>Atividades de Prestação de Serviço</label>
+    <length>800</length>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>

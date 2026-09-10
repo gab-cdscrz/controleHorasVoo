@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Aponta_Esporadicamente__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Indica que o empregado realiza apontamentos de forma esporádica. Quando marcado, ao gerar o Recurso Disponível diário, o sistema cria automaticamente um apontamento do tipo Parada com motivo &quot;Serviços Internos/Externos&quot; cobrindo todo o turno do empregado. Ao registrar um apontamento produtivo manualmente, o sistema ajusta proporcionalmente os intervalos automáticos, garantindo que todo o turno permaneça contabilizado sem horas pendentes.</description>
+    <inlineHelpText>Marque esta opção para empregados que apontam apenas eventualmente. O sistema preencherá automaticamente os horários não apontados com uma Parada de Atividade, que será ajustada conforme os apontamentos manuais forem registrados ao longo do dia.</inlineHelpText>
+    <label>Aponta Esporadicamente</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

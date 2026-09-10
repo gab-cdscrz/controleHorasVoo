@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Perfil_de_Gerente_de_Projetos__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Campo para identificar se o empregado tem perfil para gerenciamento de projetos</description>
+    <inlineHelpText>Identifique se o empregado tem condições de gerenciar projetos</inlineHelpText>
+    <label>Perfil de Gerente de Projetos</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

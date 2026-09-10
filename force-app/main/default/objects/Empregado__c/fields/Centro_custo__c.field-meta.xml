@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Centro_custo__c</fullName>
+    <label>Departamento Principal</label>
+    <referenceTo>Centro_de_Custo__c</referenceTo>
+    <relationshipLabel>Empregados (Departamento)</relationshipLabel>
+    <relationshipName>Empregados</relationshipName>
+    <relationshipOrder>0</relationshipOrder>
+    <reparentableMasterDetail>true</reparentableMasterDetail>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

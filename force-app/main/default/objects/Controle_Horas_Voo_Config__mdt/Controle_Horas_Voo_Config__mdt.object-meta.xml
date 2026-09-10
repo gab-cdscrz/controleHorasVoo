@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Limites operacionais utilizados pela página Controle de Horas de Voo.</description>
+    <label>Configuração de Horas de Voo</label>
+    <pluralLabel>Configurações de Horas de Voo</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

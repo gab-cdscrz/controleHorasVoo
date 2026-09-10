@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pessoa_Juridica__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Campo de atualização do cadastro em caso de recontratação do funcionário por meio de pessoa jurídica.</description>
+    <inlineHelpText>Campo de atualização do cadastro em caso de recontratação do funcionário por meio de pessoa jurídica.</inlineHelpText>
+    <label>Pessoa Jurídica</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

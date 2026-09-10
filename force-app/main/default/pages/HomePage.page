@@ -1,0 +1,262 @@
+<apex:page id="HomePage"
+  showHeader="false"
+  title="Inicio"
+  action="{!validate}"
+  controller="HomeController"
+  cache="false"
+  tabStyle="Noticia__c"
+  docType="html-5.0"
+>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    .content_header {
+      font-size: 20px;
+    }
+    .panelLeft {
+      display: table-cell;
+      width: 260px;
+      vertical-align: top;
+    }
+    .panelRight {
+      width: calc(100% - 260px);
+      vertical-align: top;
+    }
+    .panelTarefas {
+      width: 80%;
+      vertical-align: top;
+    }
+    .panelProximosAniversarios {
+      display: none;
+      width: 20%;
+      vertical-align: top;
+    }
+
+    /* Aviso de apontamentos - Estilo base.
+       position:absolute é intencional: o script abaixo move este elemento para
+       ser filho direto do body (fora do .fundo, que tem position:relative),
+       assim ele fica ancorado à página, aparece no topo e rola junto com o
+       resto do conteúdo, em vez de ficar fixo sobre a tela. */
+    .aviso-apontamento {
+      display: block;
+      min-width: 150px;
+      max-width: 600px;
+      color: white;
+      border-left: 3px solid;
+      border-radius: 5px;
+      font-weight: bold;
+      text-align: center;
+      position: absolute;
+      top: 0;
+      left: 260px;
+      right: 0;
+      margin: 0 auto;
+      z-index: 5;
+      transition: all 0.3s ease;
+    }
+
+    /* 0 apontamentos - Mensagem discreta e pequena */
+    .aviso-apontamento-zero {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      border-color: #66bb6a;
+      font-size: 12px;
+      padding: 4px 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      font-weight: normal;
+    }
+
+    /* 1-7 apontamentos - Verde, tamanho padrão */
+    .aviso-apontamento-baixo {
+      background-color: #91bc39;
+      border-color: #7da832;
+      font-size: 16px;
+      padding: 8px 10px;
+      box-shadow: 0 2px 5px #929292;
+    }
+
+    /* 8-20 apontamentos - Laranja, tamanho maior */
+    .aviso-apontamento-medio {
+      background-color: #ff9800;
+      border-color: #f57c00;
+      font-size: 20px;
+      padding: 10px 10px;
+      animation: pulse-warning 2s infinite;
+    }
+
+    /* >20 apontamentos - Vermelho, tamanho maior com destaque */
+    .aviso-apontamento-alto {
+      background-color: #e83c3c;
+      border-color: #c62828;
+      font-size: 22px;
+      padding: 10px 12px;
+      animation: pulse-critical 1.5s infinite;
+      box-shadow: 0 4px 10px rgba(232, 60, 60, 0.5);
+    }
+
+    /* Animação para nível médio */
+    @keyframes pulse-warning {
+      0%,
+      100% {
+        transform: scale(1);
+        box-shadow: 0 2px 5px #929292;
+      }
+      50% {
+        transform: scale(1.03);
+        box-shadow: 0 4px 8px rgba(255, 152, 0, 0.4);
+      }
+    }
+
+    /* Animação para nível crítico */
+    @keyframes pulse-critical {
+      0%,
+      100% {
+        transform: scale(1);
+        box-shadow: 0 4px 10px rgba(232, 60, 60, 0.5);
+      }
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(232, 60, 60, 0.7);
+      }
+    }
+    .wContainer {
+      width: 100%;
+      margin: 0 auto;
+      display: table;
+      table-layout: fixed;
+    }
+
+    /* Responsividade */
+    @media (max-width: 1079px) {
+      .panelProximosAniversarios {
+        display: none;
+      }
+      .panelLeft {
+        display: table-cell;
+        width: 0;
+      }
+
+      .panelRight {
+        width: 100%;
+      }
+
+      /* Ajustes responsivos por nível */
+      .aviso-apontamento-baixo {
+        font-size: 14px;
+      }
+
+      .aviso-apontamento-medio {
+        font-size: 16px;
+      }
+
+      .aviso-apontamento-alto {
+        font-size: 18px;
+      }
+    }
+
+    @media (min-width: 1080px) {
+      .panelProximosAniversarios {
+        display: table-cell;
+      }
+      .panelLeft {
+        display: table-cell;
+      }
+
+      /* Ajustes responsivos por nível */
+      .aviso-apontamento-baixo {
+        font-size: 16px;
+      }
+
+      .aviso-apontamento-medio {
+        font-size: 18px;
+      }
+
+      .aviso-apontamento-alto {
+        font-size: 20px;
+      }
+    }
+  </style>
+  <apex:composition template="{!$Site.Template}">
+    <apex:define name="body">
+      <div class="wContainer">
+        <!-- Aviso para 0 apontamentos - Mensagem discreta de parabéns -->
+        <apex:outputPanel styleClass="aviso-apontamento aviso-apontamento-zero"
+          rendered="{!AND(isUserApotamento, qtdeAptosPendentes == 0)}"
+        >
+          ✅ Parabéns! Você está em dia com seus apontamentos.
+        </apex:outputPanel>
+
+        <!-- Aviso para 1-7 apontamentos - Verde, tamanho padrão -->
+        <apex:outputPanel styleClass="aviso-apontamento aviso-apontamento-baixo"
+          rendered="{!AND(isUserApotamento, qtdeAptosPendentes >= 1, qtdeAptosPendentes <= 7)}"
+        >
+          Você possui {!qtdeAptosPendentes} {!IF(qtdeAptosPendentes > 1,
+          "apontamentos pendentes", "apontamento pendente")}.
+        </apex:outputPanel>
+
+        <!-- Aviso para 8-20 apontamentos - Laranja, tamanho maior -->
+        <apex:outputPanel styleClass="aviso-apontamento aviso-apontamento-medio"
+          rendered="{!AND(isUserApotamento, qtdeAptosPendentes >= 8, qtdeAptosPendentes <= 20)}"
+        >
+          ⚠️ Atenção! Você possui {!qtdeAptosPendentes} apontamentos pendentes!
+        </apex:outputPanel>
+
+        <!-- Aviso para >20 apontamentos - Vermelho, tamanho maior e destaque -->
+        <apex:outputPanel styleClass="aviso-apontamento aviso-apontamento-alto"
+          rendered="{!AND(isUserApotamento, qtdeAptosPendentes > 20)}"
+        >
+          🚨 URGENTE! Você possui {!qtdeAptosPendentes} apontamentos pendentes!
+        </apex:outputPanel>
+        <script>
+          (function () {
+            var aviso = document.querySelector('.aviso-apontamento');
+            if (!aviso) return;
+            // Move o aviso para fora do .fundo (que tem position:relative) e o ancora
+            // diretamente no body, para que ele apareça no topo da página e role
+            // junto com o restante do conteúdo, em vez de ficar preso à tela.
+            document.body.insertBefore(aviso, document.body.firstChild);
+            var bannerPersonificacao = document.getElementById(
+              'bannerPersonificacao'
+            );
+            aviso.style.top = bannerPersonificacao
+              ? bannerPersonificacao.offsetHeight + 'px'
+              : '0';
+          })();
+        </script>
+        <apex:panelGrid columns="2"
+          width="100%"
+          columnClasses="panelLeft,panelRight"
+        >
+          <apex:composition template="MenuPage" />
+          <apex:panelGroup >
+            <apex:insert name="content_body">
+              <apex:panelGrid columns="2"
+                width="100%"
+                columnClasses="panelTarefas,panelProximosAniversarios"
+              >
+                <apex:outputPanel >
+                  <apex:composition template="PainelTarefasPage" />
+                  <apex:composition template="PainelMuralPage" />
+                </apex:outputPanel>
+
+                <apex:outputPanel >
+                  <apex:outputPanel rendered="{!isUserEmpregado}">
+                    <apex:composition template="AniversariantePage" />
+                  </apex:outputPanel>
+                  <apex:composition template="ViagemPage" />
+                  <apex:composition template="PainelRamalPage" />
+                </apex:outputPanel>
+              </apex:panelGrid>
+            </apex:insert>
+            <apex:insert name="content_footer">
+              <apex:actionStatus id="processando">
+                <apex:facet name="start">
+                  <img src="{!URLFOR($Resource.Imagens, 'process.gif')}" />
+                </apex:facet>
+              </apex:actionStatus>
+            </apex:insert>
+          </apex:panelGroup>
+        </apex:panelGrid>
+      </div>
+    </apex:define>
+  </apex:composition>
+</apex:page>

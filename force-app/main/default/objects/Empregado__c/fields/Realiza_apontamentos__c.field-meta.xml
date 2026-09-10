@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Realiza_apontamentos__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>Caixa para indicar se o empregado realiza apontamentos de produção</description>
+    <inlineHelpText>Indique se o empregado realiza apontamentos de produção</inlineHelpText>
+    <label>Realiza Apontamentos</label>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

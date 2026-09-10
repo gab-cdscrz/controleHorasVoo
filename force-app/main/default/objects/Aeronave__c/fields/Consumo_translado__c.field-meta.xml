@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Consumo_translado__c</fullName>
+    <description>consumo de combustível em translado em litros por hora</description>
+    <externalId>false</externalId>
+    <inlineHelpText>consumo de combustível em translado em litros por hora, ex. 80, sendo 80 litros por hora</inlineHelpText>
+    <label>Consumo translado (Litros/Hora)</label>
+    <precision>3</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

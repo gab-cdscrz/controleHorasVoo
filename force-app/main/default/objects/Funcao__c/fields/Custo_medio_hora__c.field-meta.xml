@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Custo_medio_hora__c</fullName>
+    <formula>Total_salarios__c / IF(Total_horas_efet_mensal__c = 0, IF(Quantidade_empregados__c = 0, 1,176 * Quantidade_empregados__c), Total_horas_efet_mensal__c)</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>Custo médio da hora</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Currency</type>
+</CustomField>

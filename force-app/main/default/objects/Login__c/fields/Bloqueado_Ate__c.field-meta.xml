@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Bloqueado_Ate__c</fullName>
+    <description>Se preenchido e no futuro, o login está temporariamente bloqueado por excesso de tentativas de senha incorreta até essa data/hora.</description>
+    <label>Bloqueado até</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

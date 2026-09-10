@@ -1,0 +1,20 @@
+# List files or directories below to ignore them when running force:source:push, force:source:pull, and force:source:status
+# More information: https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_exclude_source.htm
+#
+
+package.xml
+
+# LWC configuration files
+**/jsconfig.json
+**/.eslintrc.json
+
+# LWC Jest
+**/__tests__/**
+
+node_modules/
+
+# Static resource de icones SLDS: 19 MB / 5121 arquivos.
+# Mantido apenas na org - nao versionado nem deployado por este projeto.
+force-app/main/default/staticresources/icones_svg_slds2
+force-app/main/default/staticresources/icones_svg_slds2/**
+force-app/main/default/staticresources/icones_svg_slds2.resource-meta.xml
