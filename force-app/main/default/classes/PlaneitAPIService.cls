@@ -141,7 +141,6 @@ public without sharing class PlaneitAPIService {
         // fornecedor: uns preenchem documentoReferencia (texto livre), outros
         // delivery_receipt_code (numero) com o fornecedor em observacoes.
         public String delivery_receipt_code;
-        public String horaAbastecimento;
         public String observacoes;
     }
     
@@ -929,7 +928,6 @@ public without sharing class PlaneitAPIService {
         ab.Custo_Total__c         = abData.custoTotal;
         ab.Documento_Referencia__c = abData.documentoReferencia;
         ab.Numero_Recibo__c       = abData.delivery_receipt_code;
-        ab.Hora_Abastecimento__c  = converterStringParaTime(abData.horaAbastecimento);
         ab.Observacoes__c         = abData.observacoes;
         
         if (String.isNotBlank(abData.dataVoo)) {
@@ -975,7 +973,6 @@ public without sharing class PlaneitAPIService {
         ab.Custo_Total__c          = converterStringParaDecimal(avData.custoTotal);
         ab.Documento_Referencia__c = avData.documentoReferencia;
         ab.Numero_Recibo__c        = avData.delivery_receipt_code;
-        ab.Hora_Abastecimento__c   = converterStringParaTime(avData.horaAbastecimento);
         ab.Observacoes__c          = avData.observacoes;
 
         if (String.isNotBlank(avData.dataAbastecimento)) {

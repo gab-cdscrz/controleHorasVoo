@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Remove Abastecimento__c.Hora_Abastecimento__c.
+    O campo foi criado para receber horaAbastecimento da Planeit, mas esse dado
+    so vem pelo endpoint dedicado /aeronave/abastecimentos: o abastecimento
+    aninhado na resposta de voos nao o traz. Como quase todo abastecimento chega
+    pela rota de voos, o campo ficava vazio.
+-->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Abastecimento__c.Hora_Abastecimento__c</members>
+        <name>CustomField</name>
+    </types>
+    <version>67.0</version>
+</Package>

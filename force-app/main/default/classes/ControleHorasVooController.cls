@@ -636,8 +636,7 @@ public without sharing class ControleHorasVooController {
                 SELECT Id, Quantidade__c, Custo_Unitario__c, Custo_Total__c,
                        Tipo_Combustivel__c, Local__c, Origem_Destino__c,
                        Documento_Referencia__c, Observacoes__c, Unidade__c,
-                       Faturado__c, Caminho_Anexo__c, Numero_Recibo__c,
-                       Hora_Abastecimento__c
+                       Faturado__c, Caminho_Anexo__c, Numero_Recibo__c
                 FROM Abastecimento__c
                 WHERE Voo__c = :controleHoras.Id
                 WITH SYSTEM_MODE
@@ -1039,8 +1038,7 @@ public without sharing class ControleHorasVooController {
                 SELECT Id, Quantidade__c, Custo_Unitario__c, Custo_Total__c,
                        Tipo_Combustivel__c, Local__c, Origem_Destino__c,
                        Documento_Referencia__c, Observacoes__c, Unidade__c,
-                       Faturado__c, Caminho_Anexo__c, Numero_Recibo__c,
-                       Hora_Abastecimento__c
+                       Faturado__c, Caminho_Anexo__c, Numero_Recibo__c
                 FROM Abastecimento__c
                 WHERE Voo__c = :controleOriginalId
                 WITH SYSTEM_MODE

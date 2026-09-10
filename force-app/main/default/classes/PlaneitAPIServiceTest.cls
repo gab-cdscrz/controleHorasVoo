@@ -56,8 +56,7 @@ private class PlaneitAPIServiceTest {
                             '"custoUnidade": 13.40,' +
                             '"custoTotal": 3443.80,' +
                             '"documentoReferencia": "NF 12345",' +
-                            '"delivery_receipt_code": "778899",' +
-                            '"horaAbastecimento": "18:34:00"' +
+                            '"delivery_receipt_code": "778899"' +
                         '}]' +
                     '}]' +
                 '}');
@@ -732,7 +731,7 @@ private class PlaneitAPIServiceTest {
         System.assertEquals(true, resultados[0].sucesso, 'Deve ter sucesso');
         
         List<Abastecimento__c> abastecimentos = [SELECT Quantidade__c, Custo_Unitario__c, Custo_Total__c, Documento_Referencia__c,
-                                                         Numero_Recibo__c, Hora_Abastecimento__c
+                                                         Numero_Recibo__c
                                                   FROM Abastecimento__c];
         System.assertEquals(1, abastecimentos.size(), 'Deve criar 1 abastecimento');
         System.assertEquals(257.00, abastecimentos[0].Quantidade__c, 'Litros deve ser 257');
@@ -741,8 +740,6 @@ private class PlaneitAPIServiceTest {
         System.assertEquals('NF 12345', abastecimentos[0].Documento_Referencia__c, 'Documento deve ser NF 12345');
         System.assertEquals('778899', abastecimentos[0].Numero_Recibo__c,
             'O numero de recibo da Planeit (delivery_receipt_code) deve ser mapeado');
-        System.assertEquals(Time.newInstance(18, 34, 0, 0), abastecimentos[0].Hora_Abastecimento__c,
-            'A hora do abastecimento deve ser mapeada');
     }
     
     @IsTest
