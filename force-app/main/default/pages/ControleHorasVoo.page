@@ -4,7 +4,9 @@
     <apex:includeScript value="{!URLFOR($Resource.ChartJs, 'chart.min.js')}"/>
     <apex:includeScript value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas.js')}"/>
     <apex:includeScript value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas-report.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas-consumo.js')}"/>
     <apex:stylesheet value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas.css')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.ControleHorasVooAssets, 'controle-horas-consumo.css')}"/>
     
     <apex:composition template="HomePage">
         <apex:define name="content_body">
@@ -23,6 +25,17 @@
                         requestJson,
                         callback,
                         { escape: true, timeout: 120000 }
+                    );
+                };
+
+                // Aba Consumo: busca uma única vez o consumo agregado e os
+                // filtros de aeronave e ano rodam no navegador.
+                window.controleHorasVooConsumoRemoto = function (accessToken, callback) {
+                    Visualforce.remoting.Manager.invokeAction(
+                        '{!$RemoteAction.ControleHorasVooController.obterConsumoCombustivel}',
+                        accessToken,
+                        callback,
+                        { escape: false, timeout: 60000 }
                     );
                 };
 
@@ -268,6 +281,19 @@
                                                     html-aria-controls="panelAeronaves"
                                                     oncomplete="onTabChange();">
                                     <apex:param name="aba" value="aeronaves"/>
+                                </apex:commandButton>
+
+                                <apex:commandButton styleClass="tab-button {!IF(abaAtiva == 'consumo', 'active', '')}"
+                                                    id="tabConsumo"
+                                                    value="Consumo"
+                                                    action="{!trocarAba}"
+                                                    reRender="workspacePanel,pageMessagesPanel"
+                                                    status="loadingStatus"
+                                                    html-role="tab"
+                                                    html-aria-selected="{!IF(abaAtiva == 'consumo', 'true', 'false')}"
+                                                    html-aria-controls="panelConsumo"
+                                                    oncomplete="onTabChange();">
+                                    <apex:param name="aba" value="consumo"/>
                                 </apex:commandButton>
                             </div>
                             
@@ -2141,6 +2167,15 @@
                                     </apex:outputPanel>
 
                                 </div> <!-- Fim da aba Aeronaves -->
+
+                                <!-- === ABA: CONSUMO (combustível, média L/h e emissões de CO2) === -->
+                                <div id="panelConsumo"
+                                     class="tab-pane {!IF(abaAtiva == 'consumo', 'active', '')}"
+                                     role="tabpanel"
+                                     aria-label="Consumo e emissões"
+                                     aria-hidden="{!IF(abaAtiva == 'consumo', 'false', 'true')}">
+                                    <section id="consumoApp" class="consumo-app"></section>
+                                </div> <!-- Fim da aba Consumo -->
 
                             </div> <!-- Fim do tab-content -->
                         </div> <!-- Fim do tabs-container -->
