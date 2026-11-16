@@ -1,0 +1,729 @@
+/* Aba "Consumo": consumo de combustível, média L/h e emissões de CO2. */
+
+.controle-horas-container .consumo-app {
+    --cx-ease: cubic-bezier(0.23, 1, 0.32, 1);
+    --cx-ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+    --cx-surface: #ffffff;
+    --cx-muted: #f5f7f9;
+    --cx-border: #dde3e8;
+    --cx-text: #2e2e2e;
+    --cx-text-soft: #5c5c5c;
+    --cx-brand: #003349;
+    --cx-brand-hover: #00475f;
+    --cx-accent: #007f9d;
+    --cx-tr: #007bff;
+    --cx-sa: #28a745;
+    --cx-co2: #d9480f;
+    --cx-focus: #0176d3;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    color: var(--cx-text);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.controle-horas-container .consumo-app [hidden] {
+    display: none !important;
+}
+
+.controle-horas-container .consumo-app button {
+    font: inherit;
+}
+
+.controle-horas-container .consumo-app :focus-visible {
+    outline: 2px solid var(--cx-focus);
+    outline-offset: 2px;
+}
+
+.controle-horas-container .consumo-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Topo ------------------------------------------------------------- */
+
+.controle-horas-container .consumo-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.controle-horas-container .consumo-titulo {
+    margin: 0;
+    color: var(--cx-brand);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.controle-horas-container .consumo-descricao {
+    margin: 2px 0 0;
+    color: var(--cx-text-soft);
+}
+
+.controle-horas-container .consumo-acoes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.controle-horas-container .consumo-atualizado {
+    color: var(--cx-text-soft);
+    font-size: 12px;
+}
+
+.controle-horas-container .consumo-botao-icone {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--cx-border);
+    border-radius: 10px;
+    background: var(--cx-surface);
+    color: var(--cx-brand);
+    cursor: pointer;
+    transition: transform 120ms var(--cx-ease), border-color 150ms ease, background-color 150ms ease;
+}
+
+.controle-horas-container .consumo-botao-icone:active {
+    transform: scale(0.97);
+}
+
+.controle-horas-container .consumo-botao-icone:disabled {
+    cursor: progress;
+}
+
+.controle-horas-container .consumo-botao-icone.girando svg {
+    animation: consumo-girar 700ms linear infinite;
+}
+
+.controle-horas-container .consumo-botao-exportar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--cx-brand);
+    border-radius: 10px;
+    background: var(--cx-surface);
+    color: var(--cx-brand);
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 120ms var(--cx-ease), background-color 150ms ease, color 150ms ease,
+        opacity 150ms ease;
+}
+
+.controle-horas-container .consumo-botao-exportar:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.controle-horas-container .consumo-botao-exportar:disabled {
+    cursor: progress;
+}
+
+.controle-horas-container .consumo-botao-exportar.ocupado {
+    opacity: 0.7;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .controle-horas-container .consumo-botao-exportar:hover:not(:disabled) {
+        background: var(--cx-brand);
+        color: #ffffff;
+    }
+}
+
+/* Filtros ---------------------------------------------------------- */
+
+.controle-horas-container .consumo-filtros {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 28px;
+    flex-wrap: wrap;
+    padding: 16px;
+    border: 1px solid var(--cx-border);
+    border-radius: 12px;
+    background: var(--cx-muted);
+}
+
+.controle-horas-container .consumo-filtro {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.controle-horas-container .consumo-filtro-aeronaves {
+    flex: 1 1 360px;
+}
+
+.controle-horas-container .consumo-rotulo {
+    color: var(--cx-text-soft);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.controle-horas-container .consumo-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.controle-horas-container .consumo-chip {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--cx-border);
+    border-radius: 999px;
+    background: var(--cx-surface);
+    color: var(--cx-text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease,
+        transform 120ms var(--cx-ease);
+}
+
+.controle-horas-container .consumo-chip:active {
+    transform: scale(0.97);
+}
+
+.controle-horas-container .consumo-chip[aria-pressed="true"] {
+    border-color: var(--cx-brand);
+    background: var(--cx-brand);
+    color: #ffffff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .controle-horas-container .consumo-chip:hover {
+        border-color: var(--cx-accent);
+    }
+
+    .controle-horas-container .consumo-chip[aria-pressed="true"]:hover {
+        background: var(--cx-brand-hover);
+    }
+
+    .controle-horas-container .consumo-botao-icone:hover:not(:disabled) {
+        border-color: var(--cx-accent);
+    }
+}
+
+/* Controle segmentado (ano e agrupamento da tabela) ----------------- */
+
+.controle-horas-container .consumo-segmentado {
+    position: relative;
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 4px;
+    border-radius: 12px;
+    background: #e6ecf0;
+}
+
+.controle-horas-container .consumo-seg-indicador {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    width: 0;
+    border-radius: 9px;
+    background: var(--cx-surface);
+    box-shadow: 0 1px 3px rgba(0, 51, 73, 0.2);
+    transition: transform 220ms var(--cx-ease-move), width 220ms var(--cx-ease-move);
+}
+
+.controle-horas-container .consumo-seg-indicador.sem-transicao {
+    transition: none;
+}
+
+.controle-horas-container .consumo-seg-opcao {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    min-width: 72px;
+    min-height: 40px;
+    padding: 0 14px;
+    margin: 0;
+    color: var(--cx-text-soft);
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 150ms ease;
+}
+
+.controle-horas-container .consumo-seg-opcao.ativo {
+    color: var(--cx-brand);
+}
+
+.controle-horas-container .consumo-seg-opcao input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.controle-horas-container .consumo-seg-opcao input:focus-visible + .consumo-seg-texto {
+    outline: 2px solid var(--cx-focus);
+    outline-offset: 6px;
+    border-radius: 6px;
+}
+
+/* Cartões ---------------------------------------------------------- */
+
+.controle-horas-container .consumo-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.controle-horas-container .consumo-cartao {
+    min-width: 0;
+    padding: 18px 20px;
+    border: 1px solid var(--cx-border);
+    border-radius: 12px;
+    background: var(--cx-surface);
+    box-shadow: 0 1px 2px rgba(0, 51, 73, 0.06);
+}
+
+.controle-horas-container .consumo-cartao-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.controle-horas-container .consumo-cartao-topo h3 {
+    margin: 0;
+    color: var(--cx-brand);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.controle-horas-container .consumo-dica {
+    color: var(--cx-text-soft);
+    font-size: 12px;
+}
+
+/* Indicadores ------------------------------------------------------ */
+
+.controle-horas-container .consumo-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.controle-horas-container .consumo-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.controle-horas-container .consumo-kpi-co2 {
+    border-color: rgba(217, 72, 15, 0.35);
+    background: linear-gradient(180deg, #fff8f4 0%, #ffffff 70%);
+}
+
+.controle-horas-container .consumo-kpi-titulo {
+    margin: 0;
+    color: var(--cx-text-soft);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.controle-horas-container .consumo-kpi-valor {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    color: var(--cx-brand);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.controle-horas-container .consumo-kpi-co2 .consumo-kpi-valor {
+    color: #a63608;
+}
+
+.controle-horas-container .consumo-kpi-valor small,
+.controle-horas-container .consumo-kpi-par small {
+    color: var(--cx-text-soft);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.controle-horas-container .consumo-kpi-sub {
+    margin: 0;
+    color: var(--cx-text-soft);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.controle-horas-container .consumo-kpi-pares {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.controle-horas-container .consumo-kpi-par {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.controle-horas-container .consumo-kpi-par strong {
+    color: var(--cx-brand);
+    font-size: 24px;
+    line-height: 1.25;
+}
+
+.controle-horas-container .consumo-kpi-sigla {
+    min-width: 22px;
+    color: var(--cx-text-soft);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.controle-horas-container .consumo-ponto {
+    align-self: center;
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.controle-horas-container .consumo-ponto-tr {
+    background: var(--cx-tr);
+}
+
+.controle-horas-container .consumo-ponto-sa {
+    background: var(--cx-sa);
+}
+
+/* Gráficos --------------------------------------------------------- */
+
+.controle-horas-container .consumo-graficos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.controle-horas-container .consumo-grafico-largo {
+    grid-column: 1 / -1;
+}
+
+.controle-horas-container .consumo-grafico {
+    position: relative;
+    height: 280px;
+}
+
+.controle-horas-container .consumo-legenda {
+    display: flex;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--cx-text-soft);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.controle-horas-container .consumo-legenda li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Tabela ----------------------------------------------------------- */
+
+.controle-horas-container .consumo-tabela-rolagem {
+    overflow-x: auto;
+    border: 1px solid var(--cx-border);
+    border-radius: 10px;
+}
+
+.controle-horas-container .consumo-tabela {
+    width: 100%;
+    min-width: 1020px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.controle-horas-container .consumo-tabela th,
+.controle-horas-container .consumo-tabela td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef1f4;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.controle-horas-container .consumo-tabela thead th {
+    background: var(--cx-muted);
+    border-bottom: 1px solid var(--cx-border);
+    color: var(--cx-text-soft);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.controle-horas-container .consumo-tabela thead th[data-grupo="tr"] {
+    box-shadow: inset 0 3px 0 var(--cx-tr);
+}
+
+.controle-horas-container .consumo-tabela thead th[data-grupo="sa"] {
+    box-shadow: inset 0 3px 0 var(--cx-sa);
+}
+
+.controle-horas-container .consumo-tabela thead th[data-grupo="co2"] {
+    box-shadow: inset 0 3px 0 var(--cx-co2);
+}
+
+.controle-horas-container .consumo-tabela .consumo-col-texto {
+    text-align: left;
+}
+
+.controle-horas-container .consumo-tabela tbody th.consumo-col-fixa,
+.controle-horas-container .consumo-tabela tfoot th.consumo-col-fixa {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--cx-surface);
+    color: var(--cx-brand);
+    font-weight: 700;
+}
+
+.controle-horas-container .consumo-tabela thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+
+.controle-horas-container .consumo-tabela tfoot th,
+.controle-horas-container .consumo-tabela tfoot td {
+    border-top: 2px solid var(--cx-border);
+    border-bottom: 0;
+    background: var(--cx-muted);
+    font-weight: 700;
+}
+
+.controle-horas-container .consumo-tabela tfoot th.consumo-col-fixa {
+    background: var(--cx-muted);
+}
+
+.controle-horas-container .consumo-tabela td:last-child {
+    color: #a63608;
+    font-weight: 600;
+}
+
+.controle-horas-container .consumo-tabela-vazia {
+    padding: 28px 12px;
+    color: var(--cx-text-soft);
+    text-align: center;
+}
+
+.controle-horas-container .consumo-corpo-troca {
+    animation: consumo-trocar 160ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .controle-horas-container .consumo-tabela tbody tr:hover td,
+    .controle-horas-container .consumo-tabela tbody tr:hover th {
+        background: #f3f9fb;
+    }
+}
+
+/* Estados ---------------------------------------------------------- */
+
+.controle-horas-container .consumo-estado {
+    display: block;
+}
+
+.controle-horas-container .consumo-carregando {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.controle-horas-container .consumo-esqueleto {
+    display: block;
+    height: 112px;
+    border-radius: 12px;
+    background: #e9eef2;
+    animation: consumo-pulsar 1.3s ease-in-out infinite;
+}
+
+.controle-horas-container .consumo-aviso {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border: 1px solid #f1b9b9;
+    border-radius: 12px;
+    background: #fdf3f3;
+    color: #8a1f1f;
+}
+
+.controle-horas-container .consumo-aviso p {
+    margin: 0;
+}
+
+.controle-horas-container .consumo-botao {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--cx-brand);
+    border-radius: 10px;
+    background: var(--cx-brand);
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 120ms var(--cx-ease), background-color 150ms ease;
+}
+
+.controle-horas-container .consumo-botao:active {
+    transform: scale(0.97);
+}
+
+.controle-horas-container .consumo-vazio {
+    margin: 0;
+    padding: 32px 16px;
+    border: 1px dashed var(--cx-border);
+    border-radius: 12px;
+    color: var(--cx-text-soft);
+    text-align: center;
+}
+
+.controle-horas-container .consumo-nota {
+    margin: 0;
+    color: var(--cx-text-soft);
+    font-size: 12px;
+}
+
+/* Movimento -------------------------------------------------------- */
+
+.controle-horas-container .consumo-entrando .consumo-cartao {
+    animation: consumo-subir 360ms var(--cx-ease) both;
+    animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes consumo-subir {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes consumo-trocar {
+    from {
+        opacity: 0.35;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes consumo-pulsar {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
+}
+
+@keyframes consumo-girar {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .controle-horas-container .consumo-entrando .consumo-cartao {
+        animation: consumo-trocar 200ms ease-out both;
+        animation-delay: 0ms;
+    }
+
+    .controle-horas-container .consumo-seg-indicador,
+    .controle-horas-container .consumo-chip,
+    .controle-horas-container .consumo-botao,
+    .controle-horas-container .consumo-botao-icone {
+        transition-property: background-color, border-color, color;
+    }
+
+    .controle-horas-container .consumo-chip:active,
+    .controle-horas-container .consumo-botao:active,
+    .controle-horas-container .consumo-botao-exportar:active,
+    .controle-horas-container .consumo-botao-icone:active {
+        transform: none;
+    }
+
+    .controle-horas-container .consumo-botao-icone.girando svg,
+    .controle-horas-container .consumo-esqueleto {
+        animation: none;
+    }
+}
+
+/* Responsivo ------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+    .controle-horas-container .consumo-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .controle-horas-container .consumo-graficos {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .controle-horas-container .consumo-kpis {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .controle-horas-container .consumo-filtros {
+        padding: 12px;
+    }
+
+    .controle-horas-container .consumo-cartao {
+        padding: 14px;
+    }
+
+    .controle-horas-container .consumo-grafico {
+        height: 240px;
+    }
+
+    .controle-horas-container .consumo-segmentado {
+        align-self: stretch;
+    }
+
+    .controle-horas-container .consumo-seg-opcao {
+        flex: 1;
+    }
+}

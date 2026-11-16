@@ -5,7 +5,7 @@
 */
 public without sharing class ControleHorasVooController {
     private static final Set<String> VALID_TABS = new Set<String>{
-        'controles', 'calendario', 'novo', 'manutencao', 'aeronaves'
+        'controles', 'calendario', 'novo', 'manutencao', 'aeronaves', 'consumo'
     };
     
     // Propriedades para os objetos principais
@@ -176,6 +176,19 @@ public without sharing class ControleHorasVooController {
             accessToken,
             requestJson
         );
+    }
+
+    /**
+     * @description Devolve o consumo de combustível, as horas e o custo por
+     * aeronave, mês e tipo de voo. A aba "Consumo" busca tudo de uma vez e faz
+     * os filtros de aeronave e ano no navegador.
+     * @param accessToken Token de sessão emitido no carregamento da página
+     */
+    @RemoteAction
+    public static ControleHorasVooConsumoService.Response obterConsumoCombustivel(
+        String accessToken
+    ) {
+        return ControleHorasVooConsumoService.responder(accessToken);
     }
 
     /**
