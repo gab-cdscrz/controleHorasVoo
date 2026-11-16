@@ -1,3 +1,11 @@
+# Controle de horas de voo (histórico)
+
+> **Este projeto não é mais a fonte.** Desde 16/11/2026 o controle de horas de voo (página, controllers, serviços,
+> integração Planeit, objetos e recursos) fica no `template-extranet`
+> (`02-Extranet-Visualforce/template-extranet`), onde a página está sendo migrada para LWC (item 16 da migração;
+> levantamento em `docs/modulos/controle-horas-voo.md`). Não edite aqui: o que estava na devbase e na produção é igual
+> ao que foi levado para lá. As credenciais nomeadas do Planeit continuam só nas orgs.
+
 # Salesforce DX Project
 
 Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
